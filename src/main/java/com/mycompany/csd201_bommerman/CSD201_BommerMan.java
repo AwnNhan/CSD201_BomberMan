@@ -26,6 +26,7 @@ public class CSD201_BommerMan {
         window.setLocationRelativeTo(null); // Hiển thị ở giữa màn hình
         window.setVisible(true);
 
+        gamePanel.requestFocus();
         // KÍCH NỔ ĐỘNG CƠ!
         gamePanel.startGameThread();
     }

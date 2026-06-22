@@ -24,8 +24,14 @@ public class GamePanel extends JPanel implements Runnable {
     public final int maxScreenRow = 13;
     public final int screenWidth = tileSize * maxScreenCol; // 720 pixel
     public final int screenHeight = tileSize * maxScreenRow; // 624 pixel
+    public GameState gameState = GameState.PLAYING; // Tạm thời để PLAYING để test luôn
 
     Thread gameThread;
+    KeyHandler keyH = new KeyHandler();
+
+    int playerX = 100;
+    int playerY = 100;
+    int playerSpeed = 4;
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -33,6 +39,8 @@ public class GamePanel extends JPanel implements Runnable {
 
         // Bật tính năng vẽ đệm kép (Double Buffering) giúp game không bị nhấp nháy (flicker)
         this.setDoubleBuffered(true);
+        this.setFocusable(true);
+        this.addKeyListener(keyH);
     }
 
     public void startGameThread() {
@@ -66,21 +74,55 @@ public class GamePanel extends JPanel implements Runnable {
     }
 
     public void update() {
-        // (Tương lai): Gọi Player.update(), Enemy.update() tại đây
+        if (gameState == GameState.PLAYING) {
+            // Logic di chuyển khối trắng của bạn giữ nguyên
+            if (keyH.upPressed == true) {
+                playerY -= playerSpeed;
+            } else if (keyH.downPressed == true) {
+                playerY += playerSpeed;
+            } else if (keyH.leftPressed == true) {
+                playerX -= playerSpeed;
+            } else if (keyH.rightPressed == true) {
+                playerX += playerSpeed;
+            }
+
+            // Nếu đang chơi mà bấm P -> Chuyển sang tạm dừng
+            if (keyH.pausePressed) {
+                gameState = GameState.PAUSE;
+                keyH.pausePressed = false; // Xóa trạng thái bấm để tránh dính phím
+            }
+
+        } else if (gameState == GameState.PAUSE) {
+            // Nếu đang tạm dừng mà bấm P lần nữa -> Tiếp tục chơi
+            if (keyH.pausePressed) {
+                gameState = GameState.PLAYING;
+                keyH.pausePressed = false;
+            }
+        }
     }
 
     @Override
     public void paintComponent(Graphics g) {
-        super.paintComponent(g); // Xóa sạch màn hình cũ trước khi vẽ cái mới
-
-        // Ép kiểu sang Graphics2D để có nhiều tính năng vẽ mạnh mẽ hơn
+        super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
-        // (Ví dụ test): Vẽ một hình vuông đại diện cho nhân vật
-        g2.setColor(Color.WHITE);
-        g2.fillRect(100, 100, tileSize, tileSize);
+        // Luôn vẽ khối trắng khi đang chơi hoặc đang tạm dừng
+        if (gameState == GameState.PLAYING || gameState == GameState.PAUSE) {
+            g2.setColor(Color.WHITE);
+            g2.fillRect(playerX, playerY, tileSize, tileSize);
+        }
 
-        // Gỡ bỏ cọ vẽ để giải phóng bộ nhớ RAM (Cực kỳ quan trọng)
+        // Nếu trạng thái hiện tại là PAUSE -> Vẽ thêm một lớp phủ mờ và chữ thông báo lên trên
+        if (gameState == GameState.PAUSE) {
+            g2.setColor(new Color(0, 0, 0, 150)); // Màu đen trong suốt
+            g2.fillRect(0, 0, screenWidth, screenHeight);
+
+            g2.setColor(Color.WHITE);
+            g2.setFont(g2.getFont().deriveFont(30f)); // Phóng to font chữ
+            g2.drawString("GAME PAUSED", screenWidth / 2 - 100, screenHeight / 2);
+        }
+
         g2.dispose();
     }
+
 }
