@@ -8,6 +8,7 @@ package core;
  *
  * @author LENOVO
  */
+import algorithm.GraphConverter;
 import algorithm.MinHeapQueue; // IMPORT cấu trúc Min-Heap của bạn
 import java.awt.Color;
 import java.awt.Dimension;
@@ -15,6 +16,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.util.ArrayList; // Dùng để quản lý danh sách ngọn lửa đang cháy
 import javax.swing.JPanel;
+import map.MapManager;
 import model.Bomb;
 import model.Flame;
 import model.IdObject; // IMPORT Enum định danh thực thể của nhóm bạn
@@ -29,10 +31,13 @@ public class GamePanel extends JPanel implements Runnable {
     public final int maxScreenRow = 13;
     public final int screenWidth = tileSize * maxScreenCol; // 720 pixel
     public final int screenHeight = tileSize * maxScreenRow; // 624 pixel
-    public GameState gameState = GameState.PLAYING; 
+    public GameState gameState = GameState.PLAYING;
 
     Thread gameThread;
     KeyHandler keyH = new KeyHandler();
+
+    MapManager mapM = new MapManager();
+    GraphConverter graphConverter = new GraphConverter();
 
     int playerX = 100;
     int playerY = 100;
@@ -51,6 +56,9 @@ public class GamePanel extends JPanel implements Runnable {
         this.setDoubleBuffered(true);
         this.setFocusable(true);
         this.addKeyListener(keyH);
+
+        graphConverter.updateGraph(mapM.getMapMatrix());
+
     }
 
     public void startGameThread() {
@@ -72,9 +80,9 @@ public class GamePanel extends JPanel implements Runnable {
             lastTime = currentTime;
 
             if (delta >= 1) {
-                update(); 
-                repaint(); 
-                delta--; 
+                update();
+                repaint();
+                delta--;
             }
         }
     }
@@ -95,7 +103,6 @@ public class GamePanel extends JPanel implements Runnable {
             // --------------------------------------------------
             // LOGIC LÀM VIỆC CỦA BẠN (CẬP NHẬT BOM & LỬA)
             // --------------------------------------------------
-            
             // 1. Kiểm tra sự kiện đặt bom khi ấn SPACE
             if (keyH.spacePressed) {
                 // Đổi tọa độ Pixel sang tọa độ Ô LƯỚI (Grid)
@@ -111,7 +118,7 @@ public class GamePanel extends JPanel implements Runnable {
                 bombQueue.enqueue(newBomb);
 
                 // Khóa phím ngay lập tức để tránh bị spam đè nút đặt liên tục
-                keyH.spacePressed = false; 
+                keyH.spacePressed = false;
             }
 
             // 2. Kiểm tra kích nổ bom đến hạn trong hàng đợi Min-Heap
@@ -129,7 +136,7 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (keyH.pausePressed) {
                 gameState = GameState.PAUSE;
-                keyH.pausePressed = false; 
+                keyH.pausePressed = false;
             }
 
         } else if (gameState == GameState.PAUSE) {
@@ -160,7 +167,7 @@ public class GamePanel extends JPanel implements Runnable {
 
                 // Kiểm tra biên an toàn để không bị văng lỗi mảng
                 if (nextX < 0 || nextX >= maxScreenCol || nextY < 0 || nextY >= maxScreenRow) {
-                    break; 
+                    break;
                 }
 
                 /* * ĐOẠN LIÊN KẾT VỚI NGƯỜI SỐ 3 (MAP):
@@ -174,7 +181,6 @@ public class GamePanel extends JPanel implements Runnable {
                  * break; // Dừng lan hướng này
                  * }
                  */
-
                 // Tạm thời chưa ráp Map, cho lửa lan tự do:
                 flameList.add(new Flame(nextX, nextY, tileSize, tileSize, IdObject.FLAME));
             }
@@ -186,17 +192,18 @@ public class GamePanel extends JPanel implements Runnable {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
+        mapM.render(g2);
+
         if (gameState == GameState.PLAYING || gameState == GameState.PAUSE) {
-            
+
             // --------------------------------------------------
             // PHẦN VẼ ĐỒ HỌA (BOM & LỬA)
             // --------------------------------------------------
             // Do tọa độ b.getX() và f.getX() đang lưu ở dạng ô lưới (0, 1, 2...)
             // nên khi vẽ lên đồ họa cần NHÂN với tileSize để chuyển về pixel.
-
             // 1. Vẽ tạm quả Bom hình tròn màu Cam
             if (!bombQueue.isEmpty()) {
-                Bomb b = bombQueue.peek(); 
+                Bomb b = bombQueue.peek();
                 g2.setColor(Color.ORANGE);
                 g2.fillOval((int) b.getX() * tileSize + 4, (int) b.getY() * tileSize + 4, tileSize - 8, tileSize - 8);
             }
@@ -215,11 +222,11 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         if (gameState == GameState.PAUSE) {
-            g2.setColor(new Color(0, 0, 0, 150)); 
+            g2.setColor(new Color(0, 0, 0, 150));
             g2.fillRect(0, 0, screenWidth, screenHeight);
 
             g2.setColor(Color.WHITE);
-            g2.setFont(g2.getFont().deriveFont(30f)); 
+            g2.setFont(g2.getFont().deriveFont(30f));
             g2.drawString("GAME PAUSED", screenWidth / 2 - 100, screenHeight / 2);
         }
 
