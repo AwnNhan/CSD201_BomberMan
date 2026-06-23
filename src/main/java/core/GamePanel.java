@@ -10,6 +10,7 @@ package core;
  */
 import algorithm.GraphConverter;
 import algorithm.MinHeapQueue; // IMPORT cấu trúc Min-Heap của bạn
+import algorithm.ScoreBST;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -32,7 +33,9 @@ public class GamePanel extends JPanel implements Runnable {
     public final int screenWidth = tileSize * maxScreenCol; // 720 pixel
     public final int screenHeight = tileSize * maxScreenRow; // 624 pixel
     public GameState gameState = GameState.PLAYING;
-
+    public AssetManager assetManager = new AssetManager();
+    public UIManager uiManager = new UIManager();
+    public ScoreBST scoreBoard = new ScoreBST();
     Thread gameThread;
     KeyHandler keyH = new KeyHandler();
 
@@ -42,7 +45,9 @@ public class GamePanel extends JPanel implements Runnable {
     int playerX = 100;
     int playerY = 100;
     int playerSpeed = 4;
-
+    int enemyX = 300;
+    int enemyY = 300;
+    int enemySpeed = 2;
     // ==========================================
     // PHẦN KHAI BÁO CỦA KỸ SƯ CHÁY NỔ
     // ==========================================
@@ -56,9 +61,10 @@ public class GamePanel extends JPanel implements Runnable {
         this.setDoubleBuffered(true);
         this.setFocusable(true);
         this.addKeyListener(keyH);
-
+       
         graphConverter.updateGraph(mapM.getMapMatrix());
-
+        assetManager.createPlaceholderSprite("PLAYER", Color.BLUE);
+        assetManager.createPlaceholderSprite("ENEMY", Color.MAGENTA);
     }
 
     public void startGameThread() {
@@ -215,10 +221,10 @@ public class GamePanel extends JPanel implements Runnable {
                 g2.fillRect((int) f.getX() * tileSize, (int) f.getY() * tileSize, tileSize, tileSize);
             }
             // --------------------------------------------------
-
+            //vẽ kẻ thù 
+            g2.drawImage(assetManager.getSprite("ENEMY"), enemyX, enemyY, tileSize, tileSize, null);
             // Vẽ nhân vật khối trắng của nhóm
-            g2.setColor(Color.WHITE);
-            g2.fillRect(playerX, playerY, tileSize, tileSize);
+            g2.drawImage(assetManager.getSprite("PLAYER"), playerX, playerY, tileSize, tileSize, null);
         }
 
         if (gameState == GameState.PAUSE) {
