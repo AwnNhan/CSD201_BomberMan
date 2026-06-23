@@ -12,5 +12,6 @@ public enum IdObject {
     PLAYER,
     ENEMY,
     BOMB,
-    WALL
+    WALL,
+    FLAME 
 }

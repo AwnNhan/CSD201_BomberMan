@@ -14,6 +14,8 @@ import java.awt.event.KeyListener;
 public class KeyHandler implements KeyListener {
 
     public boolean upPressed, downPressed, leftPressed, rightPressed, pausePressed;
+    // BỔ SUNG: Biến kiểm soát trạng thái phím Space của bạn
+    public boolean spacePressed; 
 
     @Override
     public void keyTyped(KeyEvent e) {
@@ -40,6 +42,11 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_P) {
             pausePressed = true;
         }
+
+        // BỔ SUNG: Bắt sự kiện phím Space cho Kỹ sư cháy nổ
+        if (code == KeyEvent.VK_SPACE) {
+            spacePressed = true;
+        }
     }
 
     @Override
@@ -62,6 +69,11 @@ public class KeyHandler implements KeyListener {
 
         if (code == KeyEvent.VK_P) {
             pausePressed = false;
+        }
+
+        // BỔ SUNG: Khi người chơi nhả phím Space ra thì reset lại công tắc
+        if (code == KeyEvent.VK_SPACE) {
+            spacePressed = false;
         }
     }
 }
