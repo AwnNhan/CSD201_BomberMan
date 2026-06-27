@@ -15,5 +15,6 @@ public enum GameState {
     GAME_OVER,
     TUTORIAL,    // Màn hình hướng dẫn
     ABOUT_US,    // Màn hình thông tin nhóm
-    LEADERBOARD  // Màn hình bảng xếp hạng
+    LEADERBOARD, // Màn hình bảng xếp hạng
+    MAP_SELECTION
 }

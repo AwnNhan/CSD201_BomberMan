@@ -46,6 +46,9 @@ public class GamePanel extends JPanel implements Runnable {
     private long invincibleUntil = 0;
 // khai báo chiến thăngs
     public boolean isVictory = false;
+// Danh sách các map, dễ dàng mở rộng trong tương lai
+    public String[] mapList = {"Map 1 (Default)", "Map 2 (Coming Soon)", "Map 3", "Map 4"};
+    public int currentMapIndex = 0; // Vị trí map đang được hiển thị
 
     MapManager mapM = new MapManager();
     GraphConverter graphConverter = new GraphConverter();
@@ -182,26 +185,30 @@ public class GamePanel extends JPanel implements Runnable {
             if (keyH.upPressed) {
                 menuOption--;
                 if (menuOption < 0) {
-                    menuOption = 3; // Quay vòng lên nút cuối
+                    menuOption = 4; // Quay vòng lên nút cuối
                 }
                 keyH.upPressed = false; // Khống chế nhận 1 lần bấm
             }
             if (keyH.downPressed) {
                 menuOption++;
-                if (menuOption > 3) {
+                if (menuOption > 4) {
                     menuOption = 0; // Quay vòng xuống nút đầu
                 }
                 keyH.downPressed = false;
             }
             if (keyH.enterPressed) {
                 if (menuOption == 0) {
-                    gameState = GameState.PLAYING;
+                    gameState = GameState.MAP_SELECTION; // Chuyển sang màn hình chọn map
                 } else if (menuOption == 1) {
                     gameState = GameState.TUTORIAL;
                 } else if (menuOption == 2) {
                     gameState = GameState.ABOUT_US;
                 } else if (menuOption == 3) {
                     gameState = GameState.LEADERBOARD;
+                } else if (menuOption == 4) {
+                    // THÊM CHỨC NĂNG THOÁT GAME
+                    System.out.println("Goodbye and see you again");
+                    System.exit(0);
                 }
                 keyH.enterPressed = false;
             }
@@ -216,6 +223,51 @@ public class GamePanel extends JPanel implements Runnable {
             }
             return;
         }
+
+        // ===== THÊM ĐOẠN NÀY =====
+        if (gameState == GameState.MAP_SELECTION) {
+            if (keyH.leftPressed) {
+                currentMapIndex--;
+                if (currentMapIndex < 0) {
+                    currentMapIndex = mapList.length - 1;
+                }
+                keyH.leftPressed = false;
+            }
+
+            if (keyH.rightPressed) {
+                currentMapIndex++;
+                if (currentMapIndex >= mapList.length) {
+                    currentMapIndex = 0;
+                }
+                keyH.rightPressed = false;
+            }
+
+            if (keyH.enterPressed) {
+                String selectedMapPath = "";
+
+                if (currentMapIndex == 0) {
+                    selectedMapPath = "/maps/map01.txt";
+                } else if (currentMapIndex == 1) {
+                    selectedMapPath = "/maps/map02.txt";
+                } else if (currentMapIndex == 2) {
+                    selectedMapPath = "/maps/map03.txt";
+                } else if (currentMapIndex == 3) {
+                    selectedMapPath = "/maps/map04.txt";
+                }
+
+                mapM.loadMap(selectedMapPath);
+
+                gameState = GameState.PLAYING;
+                keyH.enterPressed = false;
+            }
+
+            if (keyH.escapePressed) {
+                gameState = GameState.MENU;
+                keyH.escapePressed = false;
+            }
+            return;
+        }
+// ========================
 
         if (isGameOver || isVictory) {
             if (keyH.spacePressed) {
@@ -466,7 +518,9 @@ public class GamePanel extends JPanel implements Runnable {
         // Phân luồng vẽ dựa trên trạng thái hiện tại của Game
         if (gameState == GameState.MENU) {
             drawMenu(g2);
-        } else if (gameState == GameState.TUTORIAL) {
+        } else if (gameState == GameState.MAP_SELECTION) {
+         drawMapSelection(g2);
+        }else if (gameState == GameState.TUTORIAL) {
             drawTutorial(g2);
         } else if (gameState == GameState.ABOUT_US) {
             drawAboutUs(g2);
@@ -558,9 +612,7 @@ public class GamePanel extends JPanel implements Runnable {
                 String textMenu = "Press ESC to Back to Menu";
                 int textMenuX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textMenu) / 2;
                 g2.drawString(textMenu, textMenuX, screenHeight / 2 + 70);
-            } 
-            
-            else if (isVictory) {
+            } else if (isVictory) {
                 g2.setColor(new Color(0, 0, 0, 180));
                 g2.fillRect(0, 0, screenWidth, screenHeight);
 
@@ -605,7 +657,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawString(title, x, 120);
 
         // Danh sách các tùy chọn nút
-        String[] options = {"START GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD"};
+        String[] options = {"START GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD", "QUIT"};
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 26));
 
         for (int i = 0; i < options.length; i++) {
@@ -702,10 +754,41 @@ public class GamePanel extends JPanel implements Runnable {
         drawBackButtonHint(g2);
     }
 
+    private void drawMapSelection(Graphics2D g2) {
+        g2.setColor(new Color(20, 20, 30));
+        g2.fillRect(0, 0, screenWidth, screenHeight);
+
+        g2.setColor(Color.YELLOW);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
+        String title = "SELECT MAP";
+        int titleX = screenWidth / 2 - g2.getFontMetrics().stringWidth(title) / 2;
+        g2.drawString(title, titleX, 150);
+
+        g2.setColor(Color.CYAN);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
+        String mapName = "<   " + mapList[currentMapIndex] + "   >";
+        int mapX = screenWidth / 2 - g2.getFontMetrics().stringWidth(mapName) / 2;
+        g2.drawString(mapName, mapX, screenHeight / 2);
+
+        g2.setColor(Color.WHITE);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
+        String progress = (currentMapIndex + 1) + " / " + mapList.length;
+        int progX = screenWidth / 2 - g2.getFontMetrics().stringWidth(progress) / 2;
+        g2.drawString(progress, progX, screenHeight / 2 + 50);
+
+        // Hướng dẫn thao tác với phím A/D
+        g2.setColor(Color.RED);
+        String hint = "Use A/D to Choose | ENTER to Play | ESC to Return";
+        int hintX = screenWidth / 2 - g2.getFontMetrics().stringWidth(hint) / 2;
+        g2.drawString(hint, hintX, screenHeight - 80);
+    }
+   
+    
 // Gợi ý phím thoát ở góc màn hình phụ
     private void drawBackButtonHint(Graphics2D g2) {
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.ITALIC, 16));
         g2.setColor(Color.ORANGE);
         g2.drawString("<- Press ESC to Return Menu", 40, screenHeight - 50);
     }
+    
 }

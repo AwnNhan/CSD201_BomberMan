@@ -4,10 +4,13 @@
  */
 package algorithm;
 
-/**
- *
- * @author Admin
- */
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+
 public class ScoreBST {
 
     public class Node {
@@ -24,13 +27,16 @@ public class ScoreBST {
     }
 
     private Node root;
+    private final String FILE_PATH = "highscore.txt"; // Tên file lưu trữ
 
     public ScoreBST() {
         root = null;
+        loadFromFile(); // Tự động load dữ liệu từ file khi khởi động game
     }
 
     public void insertScore(String name, int score) {
         root = insertRec(root, name, score);
+        saveToFile(); // Tự động lưu lại vào file mỗi khi có điểm mới
     }
 
     private Node insertRec(Node root, String name, int score) {
@@ -40,13 +46,12 @@ public class ScoreBST {
         }
         if (score <= root.score) {
             root.left = insertRec(root.left, name, score);
-        } else if (score > root.score) {
+        } else {
             root.right = insertRec(root.right, name, score);
         }
         return root;
     }
 
-    // Duyệt In-order giảm dần (Right -> Root -> Left) để xếp hạng
     public void printInOrderDescending() {
         inOrderRec(root);
     }
@@ -73,6 +78,55 @@ public class ScoreBST {
                     .append(root.score)
                     .append(" pts\n");
             buildLeaderboard(root.left, sb);
+        }
+    }
+
+    // ==========================================
+    // HÀM ĐỌC DỮ LIỆU TỪ FILE TXT
+    // ==========================================
+    private void loadFromFile() {
+        try {
+            File file = new File(FILE_PATH);
+            if (!file.exists()) {
+                file.createNewFile(); 
+                return;
+            }
+            BufferedReader br = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = br.readLine()) != null) {
+                String[] parts = line.split(",");
+                if (parts.length == 2) {
+                    String name = parts[0].trim();
+                    int score = Integer.parseInt(parts[1].trim());
+                    // Gọi hàm nội bộ để đưa vào cây (không gọi insertScore để tránh ghi đè file liên tục lúc đọc)
+                    root = insertRec(root, name, score);
+                }
+            }
+            br.close();
+        } catch (IOException | NumberFormatException e) {
+            System.out.println("Lỗi đọc file điểm số: " + e.getMessage());
+        }
+    }
+
+    // ==========================================
+    // HÀM GHI DỮ LIỆU XUỐNG FILE TXT
+    // ==========================================
+    private void saveToFile() {
+        try {
+            BufferedWriter bw = new BufferedWriter(new FileWriter(FILE_PATH, false)); 
+            saveTreeToFile(root, bw);
+            bw.close();
+        } catch (IOException e) {
+            System.out.println("Lỗi lưu file điểm số: " + e.getMessage());
+        }
+    }
+
+    private void saveTreeToFile(Node node, BufferedWriter bw) throws IOException {
+        if (node != null) {
+            bw.write(node.name + "," + node.score);
+            bw.newLine();
+            saveTreeToFile(node.left, bw);
+            saveTreeToFile(node.right, bw);
         }
     }
 }
