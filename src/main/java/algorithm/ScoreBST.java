@@ -9,7 +9,9 @@ package algorithm;
  * @author Admin
  */
 public class ScoreBST {
+
     public class Node {
+
         String name;
         int score;
         Node left, right;
@@ -36,7 +38,7 @@ public class ScoreBST {
             root = new Node(name, score);
             return root;
         }
-        if (score < root.score) {
+        if (score <= root.score) {
             root.left = insertRec(root.left, name, score);
         } else if (score > root.score) {
             root.right = insertRec(root.right, name, score);
@@ -54,6 +56,23 @@ public class ScoreBST {
             inOrderRec(root.right);
             System.out.println(root.name + " - Score: " + root.score);
             inOrderRec(root.left);
+        }
+    }
+
+    public String getLeaderboard() {
+        StringBuilder sb = new StringBuilder();
+        buildLeaderboard(root, sb);
+        return sb.toString();
+    }
+
+    private void buildLeaderboard(Node root, StringBuilder sb) {
+        if (root != null) {
+            buildLeaderboard(root.right, sb);
+            sb.append(root.name)
+                    .append(" - ")
+                    .append(root.score)
+                    .append(" pts\n");
+            buildLeaderboard(root.left, sb);
         }
     }
 }
