@@ -1,96 +1,72 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.util.ArrayList;
 import java.util.List;
-import algorithm.PathFinder;
-import algorithm.GridPoint;
-/**
- *
- * @author ADMIN
- */
+import java.util.Random;
+
 public class Enemy extends GameObject {
     
-    private int hp;
-    private double speed;
-    private PathFinder pathFinder;
-    private List<GridPoint> currentPath;
-
-    // Kích thước chuẩn từ GamePanel của Người số 1 (16 x 3 = 48)
+    private int speed = 2; // Tốc độ di chuyển (Nên để số nguyên chẵn như 2 để khớp Grid 48)
+    private int currentDir = -1; // Hướng hiện tại: 0=Lên, 1=Xuống, 2=Trái, 3=Phải
+    
     private static final int TILE_SIZE = 48; 
+    private int[][] currentMap;
+    private Random random = new Random();
 
-    // Constructor: Truyền đúng 5 tham số mà lớp cha GameObject yêu cầu
     public Enemy(double startX, double startY) {
-        // Truyền: X, Y, width, height, id
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
-        
-        this.hp = 100;
-        this.speed = 1.5; // Tốc độ di chuyển
-        this.pathFinder = new PathFinder();
+    }
+
+    public void setRealData(int[][] map) {
+        this.currentMap = map;
     }
 
     @Override
     public boolean update() {
-        // --- 1. LẤY DỮ LIỆU TỪ CÁC KỸ SƯ KHÁC ---
-        GridPoint playerPos = getPlayerGridPosition(); 
-        int[][] currentMap = getMapFromPerson3();      
+        if (currentMap == null) return true;
 
-        // Tính tọa độ Grid hiện tại của Quái vật
-        // Chú ý dùng biến X, Y viết hoa kế thừa từ GameObject
-        GridPoint myPos = new GridPoint((int)(this.Y / TILE_SIZE), (int)(this.X / TILE_SIZE));
-
-        // --- 2. TÌM ĐƯỜNG BFS ---
-        currentPath = pathFinder.bfsSearch(myPos, playerPos, currentMap);
-
-        // --- 3. DI CHUYỂN ---
-        if (currentPath != null && !currentPath.isEmpty()) {
-            GridPoint nextStep = currentPath.get(0); 
+        // Chỉ đưa ra quyết định chuyển hướng khi Quái vật nằm VỪA KHÍT trong 1 ô vuông lưới
+        if ((int)this.X % TILE_SIZE == 0 && (int)this.Y % TILE_SIZE == 0) {
+            List<Integer> validDirs = getValidDirections();
             
-            double targetX = nextStep.c * TILE_SIZE;
-            double targetY = nextStep.r * TILE_SIZE;
+            // Bị kẹt cứng 4 bề
+            if (validDirs.isEmpty()) return true;
 
-            // Tính toán X, Y mới
-            double nextX = this.X;
-            double nextY = this.Y;
-
-            if (this.X < targetX) nextX += speed;
-            else if (this.X > targetX) nextX -= speed;
-            
-            if (this.Y < targetY) nextY += speed;
-            else if (this.Y > targetY) nextY -= speed;
-
-            // SỬ DỤNG HÀM CỦA NGƯỜI SỐ 1: setX và setY sẽ tự động cập nhật luôn cả Hitbox!
-            this.setX(nextX);
-            this.setY(nextY);
+            // Đổi hướng ngẫu nhiên nếu: 1. Mới sinh ra, 2. Đường cũ là tường vấp mặt, 3. Tỉ lệ ngẫu nhiên thích rẽ (1/5)
+            if (currentDir == -1 || !validDirs.contains(currentDir) || random.nextInt(5) == 0) {
+                currentDir = validDirs.get(random.nextInt(validDirs.size()));
+            }
         }
 
-        return true; // Trả về true báo hiệu update thành công (Quái vật vẫn còn sống)
+        // Cứ thế tiếp tục bước đi theo hướng đã chọn
+        if (currentDir == 0) this.setY(this.Y - speed); // Lên
+        else if (currentDir == 1) this.setY(this.Y + speed); // Xuống
+        else if (currentDir == 2) this.setX(this.X - speed); // Trái
+        else if (currentDir == 3) this.setX(this.X + speed); // Phải
+
+        return true; 
+    }
+
+    // Hàm check 4 hướng, nếu là ô trống (số 0) thì quái mới được đi vào
+    private List<Integer> getValidDirections() {
+        List<Integer> dirs = new ArrayList<>();
+        int col = (int)(this.X / TILE_SIZE);
+        int row = (int)(this.Y / TILE_SIZE);
+
+        if (row > 0 && currentMap[row - 1][col] == 0) dirs.add(0); // Lên
+        if (row < currentMap.length - 1 && currentMap[row + 1][col] == 0) dirs.add(1); // Xuống
+        if (col > 0 && currentMap[row][col - 1] == 0) dirs.add(2); // Trái
+        if (col < currentMap[0].length - 1 && currentMap[row][col + 1] == 0) dirs.add(3); // Phải
+        
+        return dirs;
     }
 
     @Override
     public boolean render(Graphics g) {
-        // Tạm thời vẽ khối vuông màu đỏ đại diện cho Quái vật
         g.setColor(Color.RED);
-        // Lấy X, Y, width, height từ các hàm get của GameObject
         g.fillRect((int)getX(), (int)getY(), getWidth(), getHeight());
-        
-        return true; // Báo hiệu render thành công
-    }
-
-    // ==========================================
-    // CÁC HÀM MOCK - CẦN GHÉP NỐI VỚI TEAM ĐỂ CÓ DỮ LIỆU THẬT
-    // ==========================================
-    private GridPoint getPlayerGridPosition() { 
-        // Thay bằng hàm lấy tọa độ thực tế của Player
-        return new GridPoint(2, 2); 
-    }
-    
-    private int[][] getMapFromPerson3() { 
-        // Trả về ma trận 13 dòng x 15 cột theo đúng kích thước GamePanel
-        return new int[13][15]; 
+        return true; 
     }
 }
