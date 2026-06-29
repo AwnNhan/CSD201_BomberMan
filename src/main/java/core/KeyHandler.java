@@ -16,7 +16,8 @@ public class KeyHandler implements KeyListener {
     public boolean upPressed, downPressed, leftPressed, rightPressed, pausePressed;
     // BỔ SUNG: Biến kiểm soát trạng thái phím Space của bạn
     public boolean spacePressed; 
-
+    // Thêm vào danh sách biến public ở đầu class
+public boolean enterPressed, escapePressed; 
     @Override
     public void keyTyped(KeyEvent e) {
         // Không dùng hàm này cho game thời gian thực
@@ -47,6 +48,13 @@ public class KeyHandler implements KeyListener {
         if (code == KeyEvent.VK_SPACE) {
             spacePressed = true;
         }
+        // Phím điều hướng Menu
+        if (code == KeyEvent.VK_ENTER) {
+            enterPressed = true;
+        }
+        if (code == KeyEvent.VK_ESCAPE) {
+            escapePressed = true;
+        }
     }
 
     @Override
@@ -74,6 +82,13 @@ public class KeyHandler implements KeyListener {
         // BỔ SUNG: Khi người chơi nhả phím Space ra thì reset lại công tắc
         if (code == KeyEvent.VK_SPACE) {
             spacePressed = false;
+        }
+        // Tắt cờ phím Menu
+        if (code == KeyEvent.VK_ENTER) {
+            enterPressed = false;
+        }
+        if (code == KeyEvent.VK_ESCAPE) {
+            escapePressed = false;
         }
     }
 }

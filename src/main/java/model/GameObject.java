@@ -20,6 +20,9 @@ public abstract class GameObject {
     protected IdObject id;
     protected Rectangle hitbox;
 
+    public int solidAreaDefaultX = 0;
+    public int solidAreaDefaultY = 0;
+
     public GameObject(double X, double Y, int width, int height, IdObject id) {
         this.X = X;
         this.Y = Y;

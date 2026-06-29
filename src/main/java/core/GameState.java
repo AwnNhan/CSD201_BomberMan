@@ -12,5 +12,8 @@ public enum GameState {
     MENU,
     PLAYING,
     PAUSE,
-    GAME_OVER
+    GAME_OVER,
+    TUTORIAL,    // Màn hình hướng dẫn
+    ABOUT_US,    // Màn hình thông tin nhóm
+    LEADERBOARD  // Màn hình bảng xếp hạng
 }
