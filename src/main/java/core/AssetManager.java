@@ -29,24 +29,6 @@ public class AssetManager {
             e.printStackTrace();
         }
     }
-
-    // Hàm tạo ảnh nhân vật bằng code (Pixel Art đơn giản - Giữ lại để dự phòng)
-    public void createPlaceholderSprite(String name, Color color) {
-        int size = 48; // Kích thước tile
-        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
-        
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (i < 2 || i > size - 3 || j < 2 || j > size - 3) {
-                    image.setRGB(i, j, Color.BLACK.getRGB()); 
-                } else {
-                    image.setRGB(i, j, color.getRGB()); 
-                }
-            }
-        }
-        sprites.put(name, image);
-    }
-
     public BufferedImage getSprite(String name) {
         return sprites.get(name);
     }

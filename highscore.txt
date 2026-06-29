@@ -1,1 +1,15 @@
 Current,200
+Current,0
+Current,0
+Current,100
+guma,100
+chovy,200
+chovy,200
+Current,300
+Current,300
+faker,300
+guma,300
+oner,300
+BDD,300
+Player,300
+keria,500
