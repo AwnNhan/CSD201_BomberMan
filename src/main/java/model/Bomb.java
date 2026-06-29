@@ -1,13 +1,13 @@
 package model;
 
+import java.awt.Color;
 import java.awt.Graphics;
 
 public class Bomb extends GameObject {
-    private long timeToExplode; // Thời gian hệ thống (ms) lúc quả bom sẽ nổ
+    private long timeToExplode; 
 
-    // Thay đổi constructor để khớp hoàn toàn với lớp cha GameObject
     public Bomb(double X, double Y, int width, int height, IdObject id, long timeToExplode) {
-        super(X, Y, width, height, id); // Truyền đủ 5 tham số lên lớp cha
+        super(X, Y, width, height, id); 
         this.timeToExplode = timeToExplode;
     }
 
@@ -15,17 +15,17 @@ public class Bomb extends GameObject {
         return timeToExplode;
     }
 
-    // BẮT BUỘC: Triển khai hàm update từ lớp cha abstract
     @Override
     public boolean update() {
-        // Hiện tại bom chưa cần xử lý di chuyển gì trong hàm update
         return true;
     }
 
-    // BẮT BUỘC: Triển khai hàm render từ lớp cha abstract
+    // ĐÃ CHUYỂN CODE VẼ BOM VÀO ĐÂY
     @Override
     public boolean render(Graphics g) {
-        // Hàm này tạm thời để trống hoặc nhóm bạn gọi vẽ hình ảnh sau
+        g.setColor(Color.ORANGE);
+        // Tọa độ X, Y lưu dưới dạng ô lưới (grid), cần nhân với width (tileSize) để vẽ pixel
+        g.fillOval((int) X * width + 4, (int) Y * height + 4, width - 8, height - 8);
         return true;
     }
 }
