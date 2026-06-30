@@ -46,11 +46,12 @@ public class GamePanel extends JPanel implements Runnable {
     private long invincibleUntil = 0;
     // khai báo chiến thăngs
     public boolean isVictory = false;
+    // tên người chơi
+    public String playerName = "Player";
     // Danh sách các map, dễ dàng mở rộng trong tương lai
     public String[] mapList = {"Map 1 (Default)", "Map 2 (Coming Soon)", "Map 3", "Map 4"};
     public int currentMapIndex = 0; // Vị trí map đang được hiển thị
-    // tên người chơi
-    public String playerName = "Player";
+
     MapManager mapM = new MapManager();
     GraphConverter graphConverter = new GraphConverter();
 
@@ -81,7 +82,7 @@ public class GamePanel extends JPanel implements Runnable {
         assetManager.loadImage("ENEMY", "/sprites/enemy.png");
 
         enemyList.add(new Enemy(tileSize * 13, tileSize * 1));
-        enemyList.add(new Enemy(tileSize * 1, tileSize * 11));
+enemyList.add(new Enemy(tileSize * 1, tileSize * 11));
         enemyList.add(new Enemy(tileSize * 13, tileSize * 11));
     }
 
@@ -116,7 +117,6 @@ public class GamePanel extends JPanel implements Runnable {
         playerY = tileSize * 1;
 
         mapM = new MapManager();
-
         // --- 1. THÊM ĐOẠN NÀY ĐỂ LUÔN TẢI LẠI ĐÚNG MAP THEO currentMapIndex ---
         String selectedMapPath = "";
         if (currentMapIndex == 0) {
@@ -129,7 +129,7 @@ public class GamePanel extends JPanel implements Runnable {
             selectedMapPath = "/maps/map04.txt";
         }
         mapM.loadMap(selectedMapPath);
-
+        // ----------------------------------------------------------------------
         graphConverter.updateGraph(mapM.getMapMatrix());
 
         bombQueue = new MinHeapQueue();
@@ -142,22 +142,19 @@ public class GamePanel extends JPanel implements Runnable {
         enemyList.add(new Enemy(tileSize * 13, tileSize * 1));
         enemyList.add(new Enemy(tileSize * 1, tileSize * 11));
         enemyList.add(new Enemy(tileSize * 13, tileSize * 11));
-
-// --- 2. XỬ LÝ LẠI ĐIỂM SỐ VÀ MẠNG ---
+        // --- 2. XỬ LÝ LẠI ĐIỂM SỐ VÀ MẠNG ---
         if (!isVictory) {
             // Nếu là GAME OVER hoặc Thoát về Menu thì mới bị reset máu và điểm
-            playerLives = 2;
-            score = 0;
-        }
+        playerLives = 2;
+        score = 0;
+}
         // GHI CHÚ: Nếu là VICTORY (Chiến thắng qua màn), trò chơi sẽ bỏ qua lệnh if này 
         // -> Giữ nguyên điểm số đang có và số mạng hiện tại để mang sang map tiếp theo.
-
         isGameOver = false;
         isVictory = false;
         gameState = GameState.PLAYING;
-
     }
-
+    
     // ==============================================================
     // LUẬT ĐI XUYÊN BOM (WALK-OFF) CỰC XỊN Ở ĐÂY
     // ==============================================================
@@ -168,7 +165,7 @@ public class GamePanel extends JPanel implements Runnable {
         int leftCol = (nextX + margin) / tileSize;
         int rightCol = (nextX + tileSize - margin - 1) / tileSize;
         int topRow = (nextY + margin) / tileSize;
-        int bottomRow = (nextY + tileSize - margin - 1) / tileSize;
+int bottomRow = (nextY + tileSize - margin - 1) / tileSize;
 
         if (leftCol < 0 || rightCol >= maxScreenCol || topRow < 0 || bottomRow >= maxScreenRow) {
             return false;
@@ -235,8 +232,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
             return; // Không chạy logic game phía dưới khi đang ở Menu
         }
-
-        // 2. XỬ LÝ LOGIC KHI ĐANG Ở CÁC MÀN HÌNH PHỤ (Bấm ESC để quay lại)
+// 2. XỬ LÝ LOGIC KHI ĐANG Ở CÁC MÀN HÌNH PHỤ (Bấm ESC để quay lại)
         if (gameState == GameState.TUTORIAL || gameState == GameState.ABOUT_US || gameState == GameState.LEADERBOARD) {
             if (keyH.escapePressed) {
                 gameState = GameState.MENU;
@@ -277,15 +273,15 @@ public class GamePanel extends JPanel implements Runnable {
                 }
 
                 mapM.loadMap(selectedMapPath);
-                // Hiển thị nhập tên
-                String inputName = javax.swing.JOptionPane.showInputDialog(this, "PlayerName:");
+                // --- CHÈN CODE NHẬP TÊN VÀO ĐÂY ---
+                String inputName = javax.swing.JOptionPane.showInputDialog(this, "playerName:");
 
-                // Kiểm tra nếu người chơi bấm Cancel hoặc để trống
                 if (inputName != null && !inputName.trim().isEmpty()) {
                     playerName = inputName.trim();
                 } else {
-                    playerName = "Player"; // Tên mặc định
+                    playerName = "Player"; // Gán tên mặc định nếu người chơi ấn Cancel hoặc để trống
                 }
+
                 gameState = GameState.PLAYING;
                 keyH.enterPressed = false;
             }
@@ -296,22 +292,22 @@ public class GamePanel extends JPanel implements Runnable {
             }
             return;
         }
-// ======================== 
+// ========================
 
         if (isGameOver || isVictory) {
             if (keyH.spacePressed) {
-        // Tách riêng logic xử lý chuyển map
-            if (isVictory) {
-        // CHỈ KHI CHIẾN THẮNG MỚI CHUYỂN SANG MAP TIẾP THEO
-            currentMapIndex++;
-            if (currentMapIndex >= mapList.length) {
-              currentMapIndex = 0; // Chơi lại từ đầu nếu đã vượt qua hết các map
+                // Tách riêng logic xử lý chuyển map
+                if (isVictory) {
+                    // CHỈ KHI CHIẾN THẮNG MỚI CHUYỂN SANG MAP TIẾP THEO
+                    currentMapIndex++;
+                    if (currentMapIndex >= mapList.length) {
+                        currentMapIndex = 0; // Chơi lại từ đầu nếu đã vượt qua hết các map
                     }
                 }
-     // Nếu Game Over (isGameOver == true) thì bỏ qua bước tăng index -> Giữ nguyên map hiện tại
+                // Nếu Game Over (isGameOver == true) thì bỏ qua bước tăng index -> Giữ nguyên map hiện tại 
                 resetGame();
                 keyH.spacePressed = false;
-            }
+}
             if (keyH.escapePressed) {
                 scoreBoard.insertScore(playerName, score); // Thêm dòng này để lưu điểm vào BXH trước
                 isVictory = false; // Thêm dòng này để ép điểm về 0
@@ -373,7 +369,7 @@ public class GamePanel extends JPanel implements Runnable {
             long currentTimeMs = System.currentTimeMillis();
             if (keyH.spacePressed) {
                 // Thời gian Cooldown: 500ms (Nửa giây mới được thả bom tiếp)
-                if (currentTimeMs - lastBombTime >= 500) {
+if (currentTimeMs - lastBombTime >= 500) {
                     int bombGridX = (playerX + tileSize / 2) / tileSize;
                     int bombGridY = (playerY + tileSize / 2) / tileSize;
 
@@ -434,7 +430,7 @@ public class GamePanel extends JPanel implements Runnable {
                     }
                 }
             }
-            // ==============================================================
+// ==============================================================
             // TẠO BẢN ĐỒ TẠM THỜI ĐỂ QUÁI VẬT NÉ BOM
             // ==============================================================
             int[][] mapWithBombs = new int[maxScreenRow][maxScreenCol];
@@ -493,14 +489,15 @@ public class GamePanel extends JPanel implements Runnable {
                     // THÊM DÒNG NÀY ĐỂ CỘNG ĐIỂM
                     score += 100;
 
-                    System.out.println("ENEMY KILLED! " + playerName + " Score: " + score);
+                    System.out.println("ENEMY KILLED!" + playerName + "Score: " + score);
                 }
             }
             // Nếu danh sách quái trống và chưa Game Over -> Chiến thắng
             if (enemyList.isEmpty() && !isGameOver) {
                 isVictory = true;
+                // Bỏ lệnh lưu điểm cũ và thêm điều kiện này:
                 // Chỉ lưu điểm 1 lần duy nhất khi người chơi vượt qua Map cuối cùng
-                if (currentMapIndex == mapList.length - 1) {
+if (currentMapIndex == mapList.length - 1) {
                 scoreBoard.insertScore(playerName, score); // Lưu điểm vào bảng xếp hạng
             }
             }
@@ -514,7 +511,8 @@ public class GamePanel extends JPanel implements Runnable {
                 gameState = GameState.PLAYING;
                 keyH.pausePressed = false;
             }
-            // --- THOÁT VỀ MENU BẰNG ESC KHI PAUSE ---
+
+            // --- THÊM ĐOẠN CODE NÀY ĐỂ THOÁT VỀ MENU BẰNG ESC ---
             if (keyH.escapePressed) {
                 scoreBoard.insertScore(playerName, score); // Thêm dòng này để lưu điểm vào BXH trước
                 isVictory = false; // Thêm dòng này để ép điểm về 0
@@ -578,8 +576,7 @@ public class GamePanel extends JPanel implements Runnable {
             drawLeaderboard(g2);
         } else {
             mapM.render(g2);
-
-            if (gameState == GameState.PLAYING || gameState == GameState.PAUSE || isGameOver || isVictory) {
+if (gameState == GameState.PLAYING || gameState == GameState.PAUSE || isGameOver || isVictory) {
 
                 // SỬA LỖI TÀNG HÌNH: Vẽ tất cả bom trong bombList thay vì chỉ lấy 1 cái từ bombQueue
                 g2.setColor(Color.ORANGE);
@@ -631,9 +628,9 @@ public class GamePanel extends JPanel implements Runnable {
                 g2.setFont(g2.getFont().deriveFont(30f));
                 String text = "GAME PAUSED";
                 int x = screenWidth / 2 - g2.getFontMetrics().stringWidth(text) / 2;
-                g2.drawString(text, x, screenHeight / 2);
+g2.drawString(text, x, screenHeight / 2);
 
-                // thêm nút thoát ra khi ấn pause game
+                // 2. Chữ Hướng dẫn (THÊM MỚI VÀO ĐÂY)
                 g2.setFont(g2.getFont().deriveFont(20f)); // Giảm kích thước font chữ xuống 20
                 String subText = "Press Esc to go back to the menu or P to continue";
                 int subX = screenWidth / 2 - g2.getFontMetrics().stringWidth(subText) / 2;
@@ -683,8 +680,7 @@ public class GamePanel extends JPanel implements Runnable {
                 String textScore = "Score: " + score;
                 int textScoreX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textScore) / 2;
                 g2.drawString(textScore, textScoreX, screenHeight / 2 - 10);
-
-                g2.setFont(g2.getFont().deriveFont(20f));
+g2.setFont(g2.getFont().deriveFont(20f));
                 String textPlayAgain = "Press SPACE to Play Again";
                 int textPlayX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textPlayAgain) / 2;
                 g2.drawString(textPlayAgain, textPlayX, screenHeight / 2 + 30);
@@ -753,7 +749,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.setColor(Color.LIGHT_GRAY);
 
         g2.drawString("- Press W, A, S, D to Move the Player.", 70, 160);
-        g2.drawString("- Press SPACE to Place a Bomb.", 70, 210);
+g2.drawString("- Press SPACE to Place a Bomb.", 70, 210);
         g2.drawString("- Avoid Flame and Enemies to survive.", 70, 260);
         g2.drawString("- press P to pause the game.", 70, 310);
 
@@ -787,7 +783,7 @@ public class GamePanel extends JPanel implements Runnable {
 
     // Hàm lưu điểm theo định dạng dấu phẩy của bạn
     public void saveScoreToLeaderboard() {
-        try (java.io.FileWriter fw = new java.io.FileWriter("highscore.txt", true); java.io.PrintWriter pw = new java.io.PrintWriter(fw)) {
+        try (java.io.FileWriter fw = new java.io.FileWriter("duong_dan_file_cua_ban.txt", true); java.io.PrintWriter pw = new java.io.PrintWriter(fw)) {
             pw.println(playerName + "," + score); // Định dạng Name,Score[cite: 4]
         } catch (java.io.IOException e) {
             System.out.println("Lỗi lưu điểm: " + e.getMessage());
@@ -809,7 +805,7 @@ public class GamePanel extends JPanel implements Runnable {
         // Nơi bạn có thể duyệt cây ScoreBST hoặc hiển thị danh sách tĩnh mẫu
         String[] lines = scoreBoard.getLeaderboard().split("\n");
 
-      int y = 130; // Đẩy danh sách lên trên (trước đây là 210)
+        int y = 130; // Đẩy danh sách lên trên (trước đây là 210)
 
         int count = 0;
         for (String line : lines) {
@@ -821,7 +817,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
             
             // Ngắt vòng lặp nếu đã vẽ đủ top 10
-            if (count >= 10) {
+if (count >= 10) {
                 break; 
             }
         }

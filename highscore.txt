@@ -1,15 +1,18 @@
 Current,200
 Current,0
 Current,0
-Player,0
-Player,0
-zeztz,0
+duc anh,0
+Current,0
+op,0
+op,0
+op,0
+ko,0
+ko,0
 Current,100
 guma,100
-Player,100
 chovy,200
 chovy,200
-zeztz,200
+Current,200
 Current,300
 Current,300
 faker,300
@@ -17,5 +20,6 @@ guma,300
 oner,300
 BDD,300
 Player,300
-Player,300
+qwer,300
+ko,300
 keria,500
