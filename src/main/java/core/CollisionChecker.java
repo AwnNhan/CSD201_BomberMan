@@ -5,7 +5,7 @@
 package core;
 
 import java.awt.Rectangle;
-
+    
 /**
  *
  * @author Nguyen Minh Phat - CE201621
