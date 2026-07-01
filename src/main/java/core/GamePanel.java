@@ -3,33 +3,35 @@ package core;
 import algorithm.GraphConverter;
 import algorithm.MinHeapQueue;
 import algorithm.ScoreBST;
+import algorithm.CustomLinkedList; // Sử dụng danh sách O(1) của Người số 2
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Rectangle;
-import java.util.ArrayList;
 import javax.swing.JPanel;
+
 import map.MapManager;
 import model.Bomb;
-import model.Flame;
-import model.IdObject;
 import model.Enemy;
+import model.Flame;
+import model.GameObject;
+import model.IdObject;
+import model.Player;
 
 public class GamePanel extends JPanel implements Runnable {
 
     final int originalTileSize = 16;
     final int scale = 3;
-    public final int tileSize = originalTileSize * scale; // 48x48
+    public final int tileSize = originalTileSize * scale;
     public final int maxScreenCol = 15;
     public final int maxScreenRow = 13;
     public final int screenWidth = tileSize * maxScreenCol;
     public final int screenHeight = tileSize * maxScreenRow;
 
-    // Đổi trạng thái mặc định ban đầu thành MENU thay vì PLAYING
     public GameState gameState = GameState.MENU;
     public boolean isGameOver = false;
-    // Biến điều hướng menu (0: START, 1: TUTORIAL, 2: ABOUT US, 3: LEADERBOARD)
     public int menuOption = 0;
 
     public AssetManager assetManager = new AssetManager();
@@ -37,36 +39,24 @@ public class GamePanel extends JPanel implements Runnable {
     public ScoreBST scoreBoard = new ScoreBST();
     Thread gameThread;
     KeyHandler keyH = new KeyHandler();
-    // điểm
+
     public int score = 0;
-    // Số mạng
     public int playerLives = 2;
-
-    // Thời gian kết thúc trạng thái bất tử
     private long invincibleUntil = 0;
-    // khai báo chiến thăngs
     public boolean isVictory = false;
-    // tên người chơi
     public String playerName = "Player";
-    // Danh sách các map, dễ dàng mở rộng trong tương lai
+
     public String[] mapList = {"Map 1 (Default)", "Map 2 (Coming Soon)", "Map 3", "Map 4"};
-    public int currentMapIndex = 0; // Vị trí map đang được hiển thị
+    public int currentMapIndex = 0;
 
-    MapManager mapM = new MapManager();
+    // === HỆ THỐNG QUẢN LÝ MỚI: XÓA ARRAYLIST VÀ BIẾN RỜI RẠC ===
+    MapManager mapM;
     GraphConverter graphConverter = new GraphConverter();
+    public CollisionChecker cChecker;
+    public CustomLinkedList objectList; // Băng chuyền O(1)
+    public Player player;               // Thay cho playerX, playerY
 
-    int playerX = tileSize * 1;
-    int playerY = tileSize * 1;
-    int playerSpeed = 4;
-
-    ArrayList<Enemy> enemyList = new ArrayList<>();
-
-    private MinHeapQueue bombQueue = new MinHeapQueue();
-    // THÊM DANH SÁCH NÀY ĐỂ VẼ TẤT CẢ CÁC QUẢ BOM (Tránh lỗi tàng hình)
-    private ArrayList<Bomb> bombList = new ArrayList<>();
-    private ArrayList<Flame> flameList = new ArrayList<>();
-
-    // BIẾN COOLDOWN BOM
+    private MinHeapQueue bombQueue;
     private long lastBombTime = 0;
 
     public GamePanel() {
@@ -76,14 +66,15 @@ public class GamePanel extends JPanel implements Runnable {
         this.setFocusable(true);
         this.addKeyListener(keyH);
 
+        mapM = new MapManager();
+        cChecker = new CollisionChecker(mapM);
         graphConverter.updateGraph(mapM.getMapMatrix());
+
+        objectList = new CustomLinkedList();
+        bombQueue = new MinHeapQueue();
 
         assetManager.loadImage("PLAYER", "/sprites/player.png");
         assetManager.loadImage("ENEMY", "/sprites/enemy.png");
-
-        enemyList.add(new Enemy(tileSize * 13, tileSize * 1));
-enemyList.add(new Enemy(tileSize * 1, tileSize * 11));
-        enemyList.add(new Enemy(tileSize * 13, tileSize * 11));
     }
 
     public void startGameThread() {
@@ -113,110 +104,57 @@ enemyList.add(new Enemy(tileSize * 1, tileSize * 11));
     }
 
     private void resetGame() {
-        playerX = tileSize * 1;
-        playerY = tileSize * 1;
-
         mapM = new MapManager();
-        // --- 1. THÊM ĐOẠN NÀY ĐỂ LUÔN TẢI LẠI ĐÚNG MAP THEO currentMapIndex ---
-        String selectedMapPath = "";
-        if (currentMapIndex == 0) {
-            selectedMapPath = "/maps/map01.txt";
-        } else if (currentMapIndex == 1) {
-            selectedMapPath = "/maps/map02.txt";
-        } else if (currentMapIndex == 2) {
-            selectedMapPath = "/maps/map03.txt";
-        } else if (currentMapIndex == 3) {
-            selectedMapPath = "/maps/map04.txt";
-        }
+        String selectedMapPath = "/maps/map0" + (currentMapIndex + 1) + ".txt";
         mapM.loadMap(selectedMapPath);
-        // ----------------------------------------------------------------------
+
+        cChecker = new CollisionChecker(mapM);
         graphConverter.updateGraph(mapM.getMapMatrix());
 
+        // Reset hệ thống
+        objectList = new CustomLinkedList();
         bombQueue = new MinHeapQueue();
-        bombList.clear(); // Reset list bom
-        flameList.clear();
-        enemyList.clear();
+        lastBombTime = 0;
 
-        lastBombTime = 0; // Reset Cooldown
-
-        enemyList.add(new Enemy(tileSize * 13, tileSize * 1));
-        enemyList.add(new Enemy(tileSize * 1, tileSize * 11));
-        enemyList.add(new Enemy(tileSize * 13, tileSize * 11));
-        // --- 2. XỬ LÝ LẠI ĐIỂM SỐ VÀ MẠNG ---
         if (!isVictory) {
-            // Nếu là GAME OVER hoặc Thoát về Menu thì mới bị reset máu và điểm
-        playerLives = 2;
-        score = 0;
-}
-        // GHI CHÚ: Nếu là VICTORY (Chiến thắng qua màn), trò chơi sẽ bỏ qua lệnh if này 
-        // -> Giữ nguyên điểm số đang có và số mạng hiện tại để mang sang map tiếp theo.
+            playerLives = 2;
+            score = 0;
+        }
         isGameOver = false;
         isVictory = false;
+
+        // Khởi tạo Nhân vật và nạp lên băng chuyền
+        player = new Player(tileSize, tileSize, keyH, cChecker);
+        objectList.addLast(player);
+
+        // Khởi tạo Quái vật và nạp lên băng chuyền
+        objectList.addLast(new Enemy(tileSize * 13, tileSize * 1));
+        objectList.addLast(new Enemy(tileSize * 1, tileSize * 11));
+        objectList.addLast(new Enemy(tileSize * 13, tileSize * 11));
+
         gameState = GameState.PLAYING;
-    }
-    
-    // ==============================================================
-    // LUẬT ĐI XUYÊN BOM (WALK-OFF) CỰC XỊN Ở ĐÂY
-    // ==============================================================
-    private boolean canMove(int nextX, int nextY) {
-        int margin = 12;
-
-        // 1. KIỂM TRA TƯỜNG (BẢN ĐỒ)
-        int leftCol = (nextX + margin) / tileSize;
-        int rightCol = (nextX + tileSize - margin - 1) / tileSize;
-        int topRow = (nextY + margin) / tileSize;
-int bottomRow = (nextY + tileSize - margin - 1) / tileSize;
-
-        if (leftCol < 0 || rightCol >= maxScreenCol || topRow < 0 || bottomRow >= maxScreenRow) {
-            return false;
-        }
-
-        int[][] map = mapM.getMapMatrix();
-        if (map[topRow][leftCol] != 0 || map[topRow][rightCol] != 0
-                || map[bottomRow][leftCol] != 0 || map[bottomRow][rightCol] != 0) {
-            return false;
-        }
-
-        // 2. KIỂM TRA VA CHẠM VỚI BOM SẴN CÓ
-        Rectangle nextHitbox = new Rectangle(nextX + margin, nextY + margin, tileSize - 2 * margin, tileSize - 2 * margin);
-        Rectangle currentHitbox = new Rectangle(playerX + margin, playerY + margin, tileSize - 2 * margin, tileSize - 2 * margin);
-
-        for (Bomb b : bombList) {
-            Rectangle bombHitbox = new Rectangle((int) b.getX() * tileSize, (int) b.getY() * tileSize, tileSize, tileSize);
-
-            // Nếu bước tiếp theo dẫm trúng quả bom
-            if (nextHitbox.intersects(bombHitbox)) {
-                // Nếu hiện tại nhân vật KHÔNG dẫm lên bom (đã ra ngoài hoàn toàn) -> Bị chặn lại (thành Tường cứng)
-                if (!currentHitbox.intersects(bombHitbox)) {
-                    return false;
-                }
-                // Nếu hiện tại đang dẫm lên bom (vừa mới đặt xong) -> Cho phép đi tiếp để thoát ra
-            }
-        }
-
-        return true;
     }
 
     public void update() {
-        // 1. XỬ LÝ LOGIC KHI ĐANG Ở MÀN HÌNH MENU CHÍNH
+        // --- LOGIC MENU & ĐIỀU HƯỚNG MÀN HÌNH ---
         if (gameState == GameState.MENU) {
             if (keyH.upPressed) {
                 menuOption--;
                 if (menuOption < 0) {
-                    menuOption = 4; // Quay vòng lên nút cuối
+                    menuOption = 4;
                 }
-                keyH.upPressed = false; // Khống chế nhận 1 lần bấm
+                keyH.upPressed = false;
             }
             if (keyH.downPressed) {
                 menuOption++;
                 if (menuOption > 4) {
-                    menuOption = 0; // Quay vòng xuống nút đầu
+                    menuOption = 0;
                 }
                 keyH.downPressed = false;
             }
             if (keyH.enterPressed) {
                 if (menuOption == 0) {
-                    gameState = GameState.MAP_SELECTION; // Chuyển sang màn hình chọn map
+                    gameState = GameState.MAP_SELECTION;
                 } else if (menuOption == 1) {
                     gameState = GameState.TUTORIAL;
                 } else if (menuOption == 2) {
@@ -224,15 +162,13 @@ int bottomRow = (nextY + tileSize - margin - 1) / tileSize;
                 } else if (menuOption == 3) {
                     gameState = GameState.LEADERBOARD;
                 } else if (menuOption == 4) {
-                    // THÊM CHỨC NĂNG THOÁT GAME
-                    System.out.println("Goodbye and see you again");
                     System.exit(0);
                 }
                 keyH.enterPressed = false;
             }
-            return; // Không chạy logic game phía dưới khi đang ở Menu
+            return;
         }
-// 2. XỬ LÝ LOGIC KHI ĐANG Ở CÁC MÀN HÌNH PHỤ (Bấm ESC để quay lại)
+
         if (gameState == GameState.TUTORIAL || gameState == GameState.ABOUT_US || gameState == GameState.LEADERBOARD) {
             if (keyH.escapePressed) {
                 gameState = GameState.MENU;
@@ -241,7 +177,6 @@ int bottomRow = (nextY + tileSize - margin - 1) / tileSize;
             return;
         }
 
-        // ===== THÊM ĐOẠN NÀY =====
         if (gameState == GameState.MAP_SELECTION) {
             if (keyH.leftPressed) {
                 currentMapIndex--;
@@ -250,7 +185,6 @@ int bottomRow = (nextY + tileSize - margin - 1) / tileSize;
                 }
                 keyH.leftPressed = false;
             }
-
             if (keyH.rightPressed) {
                 currentMapIndex++;
                 if (currentMapIndex >= mapList.length) {
@@ -258,249 +192,149 @@ int bottomRow = (nextY + tileSize - margin - 1) / tileSize;
                 }
                 keyH.rightPressed = false;
             }
-
             if (keyH.enterPressed) {
-                String selectedMapPath = "";
-
-                if (currentMapIndex == 0) {
-                    selectedMapPath = "/maps/map01.txt";
-                } else if (currentMapIndex == 1) {
-                    selectedMapPath = "/maps/map02.txt";
-                } else if (currentMapIndex == 2) {
-                    selectedMapPath = "/maps/map03.txt";
-                } else if (currentMapIndex == 3) {
-                    selectedMapPath = "/maps/map04.txt";
-                }
-
-                mapM.loadMap(selectedMapPath);
-                // --- CHÈN CODE NHẬP TÊN VÀO ĐÂY ---
-                String inputName = javax.swing.JOptionPane.showInputDialog(this, "playerName:");
-
-                if (inputName != null && !inputName.trim().isEmpty()) {
-                    playerName = inputName.trim();
-                } else {
-                    playerName = "Player"; // Gán tên mặc định nếu người chơi ấn Cancel hoặc để trống
-                }
-
-                gameState = GameState.PLAYING;
+                String inputName = javax.swing.JOptionPane.showInputDialog(this, "Nhập tên người chơi:");
+                playerName = (inputName != null && !inputName.trim().isEmpty()) ? inputName.trim() : "Player";
+                resetGame();
                 keyH.enterPressed = false;
             }
-
             if (keyH.escapePressed) {
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
             }
             return;
         }
-// ========================
 
         if (isGameOver || isVictory) {
             if (keyH.spacePressed) {
-                // Tách riêng logic xử lý chuyển map
                 if (isVictory) {
-                    // CHỈ KHI CHIẾN THẮNG MỚI CHUYỂN SANG MAP TIẾP THEO
                     currentMapIndex++;
                     if (currentMapIndex >= mapList.length) {
-                        currentMapIndex = 0; // Chơi lại từ đầu nếu đã vượt qua hết các map
+                        currentMapIndex = 0;
                     }
                 }
-                // Nếu Game Over (isGameOver == true) thì bỏ qua bước tăng index -> Giữ nguyên map hiện tại 
                 resetGame();
                 keyH.spacePressed = false;
-}
+            }
             if (keyH.escapePressed) {
-                scoreBoard.insertScore(playerName, score); // Thêm dòng này để lưu điểm vào BXH trước
-                isVictory = false; // Thêm dòng này để ép điểm về 0
-                resetGame();
-                gameState = GameState.MENU; // Chuyển về màn hình Menu
+                scoreBoard.insertScore(playerName, score);
+                isVictory = false;
+                gameState = GameState.MENU;
                 keyH.escapePressed = false;
             }
             return;
         }
 
+        // --- LOGIC PLAYING CHÍNH THỨC ---
         if (gameState == GameState.PLAYING) {
-            int nextPlayerX = playerX;
-            int nextPlayerY = playerY;
-
-            if (keyH.upPressed) {
-                nextPlayerY -= playerSpeed;
-                int targetX = ((playerX + tileSize / 2) / tileSize) * tileSize;
-                if (playerX < targetX) {
-                    nextPlayerX += Math.min(playerSpeed, targetX - playerX);
-                } else if (playerX > targetX) {
-                    nextPlayerX -= Math.min(playerSpeed, playerX - targetX);
-                }
-            } else if (keyH.downPressed) {
-                nextPlayerY += playerSpeed; // ĐÃ SỬA LỖI Ở ĐÂY: Phải là cộng (+) để đi xuống
-                int targetX = ((playerX + tileSize / 2) / tileSize) * tileSize;
-                if (playerX < targetX) {
-                    nextPlayerX += Math.min(playerSpeed, targetX - playerX);
-                } else if (playerX > targetX) {
-                    nextPlayerX -= Math.min(playerSpeed, playerX - targetX);
-                }
-            } else if (keyH.leftPressed) {
-                nextPlayerX -= playerSpeed;
-                int targetY = ((playerY + tileSize / 2) / tileSize) * tileSize;
-                if (playerY < targetY) {
-                    nextPlayerY += Math.min(playerSpeed, targetY - playerY);
-                } else if (playerY > targetY) {
-                    nextPlayerY -= Math.min(playerSpeed, playerY - targetY);
-                }
-            } else if (keyH.rightPressed) {
-                nextPlayerX += playerSpeed;
-                int targetY = ((playerY + tileSize / 2) / tileSize) * tileSize;
-                if (playerY < targetY) {
-                    nextPlayerY += Math.min(playerSpeed, targetY - playerY);
-                } else if (playerY > targetY) {
-                    nextPlayerY -= Math.min(playerSpeed, playerY - targetY);
-                }
-            }
-
-            if (canMove(nextPlayerX, playerY)) {
-                playerX = nextPlayerX;
-            }
-            if (canMove(playerX, nextPlayerY)) {
-                playerY = nextPlayerY;
-            }
-
-            // ==============================================================
-            // LOGIC ĐẶT BOM (CÓ COOLDOWN VÀ CHỐNG TRÙNG LẶP Ô)
-            // ==============================================================
             long currentTimeMs = System.currentTimeMillis();
-            if (keyH.spacePressed) {
-                // Thời gian Cooldown: 500ms (Nửa giây mới được thả bom tiếp)
-if (currentTimeMs - lastBombTime >= 500) {
-                    int bombGridX = (playerX + tileSize / 2) / tileSize;
-                    int bombGridY = (playerY + tileSize / 2) / tileSize;
 
-                    // Chống đặt 2 quả bom lồng vào nhau trên cùng 1 ô vuông
-                    boolean hasBombHere = false;
-                    for (Bomb b : bombList) {
-                        if (b.getX() == bombGridX && b.getY() == bombGridY) {
-                            hasBombHere = true;
-                            break;
-                        }
-                    }
+            // 1. ĐẶT BOM
+            if (keyH.spacePressed && currentTimeMs - lastBombTime >= 500) {
+                int bombX = ((int) player.getX() + tileSize / 2) / tileSize * tileSize;
+                int bombY = ((int) player.getY() + tileSize / 2) / tileSize * tileSize;
 
-                    if (!hasBombHere) {
-                        long timeToExplode = currentTimeMs + 3000;
-                        Bomb newBomb = new Bomb(bombGridX, bombGridY, tileSize, tileSize, IdObject.BOMB, timeToExplode);
-                        bombQueue.enqueue(newBomb);
-                        bombList.add(newBomb); // Thêm vào list để vẽ lên màn hình
-                        lastBombTime = currentTimeMs; // Ghi nhận thời gian vừa đặt
+                boolean hasBombHere = false;
+                CustomLinkedList.Node temp = objectList.head;
+                while (temp != null) {
+                    if (temp.data.getId() == IdObject.BOMB && temp.data.getX() == bombX && temp.data.getY() == bombY) {
+                        hasBombHere = true;
                     }
+                    temp = temp.next;
+                }
+
+                if (!hasBombHere) {
+                    Bomb b = new Bomb(bombX, bombY, tileSize, tileSize, IdObject.BOMB, currentTimeMs + 3000);
+                    bombQueue.enqueue(b);
+                    objectList.addLast(b);
+                    lastBombTime = currentTimeMs;
                 }
                 keyH.spacePressed = false;
             }
 
-            // Kích nổ bom
+            // 2. KÍCH NỔ BOM 
             if (!bombQueue.isEmpty() && currentTimeMs >= bombQueue.peek().getTimeToExplode()) {
-                Bomb bombToExplode = bombQueue.dequeue();
+                Bomb b = bombQueue.dequeue();
 
-                // Cực kỳ quan trọng: Xóa quả bom khỏi danh sách vẽ đồ họa dựa theo tọa độ
-                bombList.removeIf(b -> b.getX() == bombToExplode.getX() && b.getY() == bombToExplode.getY());
-
-                executeExplosion(bombToExplode);
-            }
-            flameList.removeIf(Flame::isExpired);
-
-            Rectangle playerHitbox = new Rectangle(playerX + 5, playerY + 5, tileSize - 10, tileSize - 10);
-            //Chỉ kiểm tra va chạm khi KHÔNG bất tử
-            boolean invincible = System.currentTimeMillis() < invincibleUntil;
-            //-----------------------
-            if (!invincible) {
-                for (Flame f : flameList) {
-                    Rectangle flameHitbox = new Rectangle((int) f.getX() * tileSize + 5, (int) f.getY() * tileSize + 5, tileSize - 10, tileSize - 10);
-                    if (playerHitbox.intersects(flameHitbox)) {
-                        playerLives--;
-
-                        if (playerLives <= 0) {
-                            isGameOver = true;
-                            scoreBoard.insertScore(playerName, score);
-                            System.out.println("GAME OVER!");
-                        } else {
-                            // Hồi sinh
-                            playerX = tileSize;
-                            playerY = tileSize;
-                            // thời gian được bất tử
-                            invincibleUntil = System.currentTimeMillis() + 2000;
-                        }
-
+                // Gỡ bom khỏi băng chuyền và thả lửa
+                CustomLinkedList.Node temp = objectList.head;
+                while (temp != null) {
+                    if (temp.data == b) {
+                        objectList.removeNode(temp);
                         break;
                     }
+                    temp = temp.next;
                 }
+                executeExplosion(b);
             }
-// ==============================================================
-            // TẠO BẢN ĐỒ TẠM THỜI ĐỂ QUÁI VẬT NÉ BOM
-            // ==============================================================
+
+            // Tạo map phụ chứa bom để quái né
             int[][] mapWithBombs = new int[maxScreenRow][maxScreenCol];
             int[][] originalMap = mapM.getMapMatrix();
             for (int r = 0; r < maxScreenRow; r++) {
-                for (int c = 0; c < maxScreenCol; c++) {
-                    mapWithBombs[r][c] = originalMap[r][c];
-                }
+                System.arraycopy(originalMap[r], 0, mapWithBombs[r], 0, maxScreenCol);
             }
 
-            // Đánh dấu các ô có bom thành tường cứng (số 1) để quái né tránh
-            for (Bomb b : bombList) {
-                int br = (int) b.getY();
-                int bc = (int) b.getX();
-                if (br >= 0 && br < maxScreenRow && bc >= 0 && bc < maxScreenCol) {
-                    mapWithBombs[br][bc] = 1;
+            CustomLinkedList.Node t = objectList.head;
+            while (t != null) {
+                if (t.data.getId() == IdObject.BOMB) {
+                    mapWithBombs[(int) t.data.getY() / tileSize][(int) t.data.getX() / tileSize] = 1;
                 }
+                t = t.next;
             }
 
-            for (int i = enemyList.size() - 1; i >= 0; i--) {
-                Enemy e = enemyList.get(i);
+            // =================================================================
+            // 3. VÒNG LẶP UPDATE THẦN THÁNH: O(1) CHO MỌI THAO TÁC XÓA
+            // =================================================================
+            CustomLinkedList.Node current = objectList.head;
+            int enemyCount = 0;
+            boolean invincible = System.currentTimeMillis() < invincibleUntil;
 
-                // Thay vì cấp bản đồ gốc, ta cấp cho quái bản đồ đã được đánh dấu bom
-                e.setRealData(mapWithBombs);
-                e.update();
+            while (current != null) {
+                CustomLinkedList.Node nextNode = current.next; // Lưu mắt xích tiếp theo
+                GameObject obj = current.data;
 
-                Rectangle enemyHitbox = new Rectangle((int) e.getX() + 5, (int) e.getY() + 5, e.getWidth() - 10, e.getHeight() - 10);
+                obj.update(); // Mọi vật thể tự update vị trí
 
-                if (!invincible && playerHitbox.intersects(enemyHitbox)) {
-
-                    playerLives--;
-
-                    if (playerLives <= 0) {
-                        isGameOver = true;
-                        scoreBoard.insertScore(playerName, score);
+                // Xử lý Quái
+                if (obj.getId() == IdObject.ENEMY) {
+                    ((Enemy) obj).setRealData(mapWithBombs);
+                    enemyCount++;
+                    if (!invincible && cChecker.checkEntity(player.getHitbox(), obj.getHitbox())) {
+                        killPlayer();
+                    }
+                } // Xử lý Lửa
+                else if (obj.getId() == IdObject.FLAME) {
+                    Flame f = (Flame) obj;
+                    if (f.isExpired()) {
+                        objectList.removeNode(current); // XÓA LỬA TỨC THỜI (O(1))
                     } else {
-                        playerX = tileSize;
-                        playerY = tileSize;
-                        invincibleUntil = System.currentTimeMillis() + 2000;
+                        if (!invincible && cChecker.checkEntity(player.getHitbox(), f.getHitbox())) {
+                            killPlayer();
+                        }
+
+                        // Kiểm tra lửa đốt quái
+                        CustomLinkedList.Node inner = objectList.head;
+                        while (inner != null) {
+                            if (inner.data.getId() == IdObject.ENEMY && cChecker.checkEntity(f.getHitbox(), inner.data.getHitbox())) {
+                                objectList.removeNode(inner); // TIÊU DIỆT QUÁI (O(1))
+                                score += 100;
+                            }
+                            inner = inner.next;
+                        }
                     }
-
-                    break;
                 }
-
-                boolean isEnemyKilled = false;
-                for (Flame f : flameList) {
-                    Rectangle flameHitbox = new Rectangle((int) f.getX() * tileSize + 5, (int) f.getY() * tileSize + 5, tileSize - 10, tileSize - 10);
-                    if (enemyHitbox.intersects(flameHitbox)) {
-                        isEnemyKilled = true;
-                        break;
-                    }
-                }
-
-                if (isEnemyKilled) {
-                    enemyList.remove(i);
-                    // THÊM DÒNG NÀY ĐỂ CỘNG ĐIỂM
-                    score += 100;
-
-                    System.out.println("ENEMY KILLED!" + playerName + "Score: " + score);
-                }
+                current = nextNode; // Bước tiếp trên băng chuyền
             }
-            // Nếu danh sách quái trống và chưa Game Over -> Chiến thắng
-            if (enemyList.isEmpty() && !isGameOver) {
+
+            // Kiểm tra Win
+            if (enemyCount == 0 && !isGameOver) {
                 isVictory = true;
-                // Bỏ lệnh lưu điểm cũ và thêm điều kiện này:
-                // Chỉ lưu điểm 1 lần duy nhất khi người chơi vượt qua Map cuối cùng
-if (currentMapIndex == mapList.length - 1) {
-                scoreBoard.insertScore(playerName, score); // Lưu điểm vào bảng xếp hạng
+                if (currentMapIndex == mapList.length - 1) {
+                    scoreBoard.insertScore(playerName, score);
+                }
             }
-            }
+
             if (keyH.pausePressed) {
                 gameState = GameState.PAUSE;
                 keyH.pausePressed = false;
@@ -511,50 +345,55 @@ if (currentMapIndex == mapList.length - 1) {
                 gameState = GameState.PLAYING;
                 keyH.pausePressed = false;
             }
-
-            // --- THÊM ĐOẠN CODE NÀY ĐỂ THOÁT VỀ MENU BẰNG ESC ---
             if (keyH.escapePressed) {
-                scoreBoard.insertScore(playerName, score); // Thêm dòng này để lưu điểm vào BXH trước
-                isVictory = false; // Thêm dòng này để ép điểm về 0
-                resetGame(); // Đặt lại các thông số (vị trí, máu, điểm...) để không bị dính vào ván cũ
-                gameState = GameState.MENU; // Đưa trạng thái về Menu chính
+                scoreBoard.insertScore(playerName, score);
+                isVictory = false;
+                resetGame();
+                gameState = GameState.MENU;
                 keyH.escapePressed = false;
             }
         }
     }
 
+    private void killPlayer() {
+        playerLives--;
+        if (playerLives <= 0) {
+            isGameOver = true;
+            scoreBoard.insertScore(playerName, score);
+        } else {
+            player.setX(tileSize);
+            player.setY(tileSize);
+            invincibleUntil = System.currentTimeMillis() + 2000;
+        }
+    }
+
     private void executeExplosion(Bomb bomb) {
-        int bombX = (int) bomb.getX();
-        int bombY = (int) bomb.getY();
-        int flameLength = 2;
+        int bx = (int) bomb.getX();
+        int by = (int) bomb.getY();
+        objectList.addLast(new Flame(bx, by, tileSize, tileSize, IdObject.FLAME));
 
-        flameList.add(new Flame(bombX, bombY, tileSize, tileSize, IdObject.FLAME));
+        int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
+        int[][] map = mapM.getMapMatrix();
 
-        int[][] directions = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-        int[][] currentMap = mapM.getMapMatrix();
-
-        for (int[] dir : directions) {
-            for (int i = 1; i <= flameLength; i++) {
-                int nextCol = bombX + dir[1] * i;
-                int nextRow = bombY + dir[0] * i;
+        for (int[] dir : dirs) {
+            for (int i = 1; i <= 2; i++) { // Flame length = 2
+                int nextCol = bx / tileSize + dir[1] * i;
+                int nextRow = by / tileSize + dir[0] * i;
 
                 if (nextCol < 0 || nextCol >= maxScreenCol || nextRow < 0 || nextRow >= maxScreenRow) {
                     break;
                 }
 
-                int tileType = currentMap[nextRow][nextCol];
-
+                int tileType = map[nextRow][nextCol];
                 if (tileType == 1) {
-                    break;
+                    break; // Kẹt Tường
                 }
-
                 if (tileType == 2) {
-                    flameList.add(new Flame(nextCol, nextRow, tileSize, tileSize, IdObject.FLAME));
-                    currentMap[nextRow][nextCol] = 0;
+                    objectList.addLast(new Flame(nextCol * tileSize, nextRow * tileSize, tileSize, tileSize, IdObject.FLAME));
+                    mapM.destroySoftWall(nextRow, nextCol); // Phá gạch
                     break;
                 }
-
-                flameList.add(new Flame(nextCol, nextRow, tileSize, tileSize, IdObject.FLAME));
+                objectList.addLast(new Flame(nextCol * tileSize, nextRow * tileSize, tileSize, tileSize, IdObject.FLAME));
             }
         }
     }
@@ -563,7 +402,7 @@ if (currentMapIndex == mapList.length - 1) {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
-        // Phân luồng vẽ dựa trên trạng thái hiện tại của Game
+
         if (gameState == GameState.MENU) {
             drawMenu(g2);
         } else if (gameState == GameState.MAP_SELECTION) {
@@ -576,200 +415,136 @@ if (currentMapIndex == mapList.length - 1) {
             drawLeaderboard(g2);
         } else {
             mapM.render(g2);
-if (gameState == GameState.PLAYING || gameState == GameState.PAUSE || isGameOver || isVictory) {
+            if (gameState == GameState.PLAYING || gameState == GameState.PAUSE || isGameOver || isVictory) {
 
-                // SỬA LỖI TÀNG HÌNH: Vẽ tất cả bom trong bombList thay vì chỉ lấy 1 cái từ bombQueue
-                g2.setColor(Color.ORANGE);
-                for (Bomb b : bombList) {
-                    g2.fillOval((int) b.getX() * tileSize + 4, (int) b.getY() * tileSize + 4, tileSize - 8, tileSize - 8);
-                }
+                // --- DUYỆT RENDER TOÀN BỘ VẬT THỂ TRÊN BĂNG CHUYỀN ---
+                CustomLinkedList.Node current = objectList.head;
+                while (current != null) {
+                    GameObject obj = current.data;
 
-                g2.setColor(Color.RED);
-                for (Flame f : flameList) {
-                    g2.fillRect((int) f.getX() * tileSize, (int) f.getY() * tileSize, tileSize, tileSize);
-                }
-
-                // ==================================================
-                // SỬA LỖI VẼ QUÁI VẬT (CHOVY): Dùng vòng lặp enemyList
-                // ==================================================
-                for (Enemy e : enemyList) {
-                    if (assetManager.getSprite("ENEMY") != null) {
-                        // Lấy tọa độ của từng con quái trong danh sách để vẽ ảnh
-                        g2.drawImage(assetManager.getSprite("ENEMY"), (int) e.getX(), (int) e.getY(), tileSize, tileSize, null);
-                    } else {
-                        e.render(g2);
+                    if (obj.getId() == IdObject.PLAYER) {
+                        if (System.currentTimeMillis() > invincibleUntil || System.currentTimeMillis() / 100 % 2 == 0) {
+                            if (assetManager.getSprite("PLAYER") != null) {
+                                g2.drawImage(assetManager.getSprite("PLAYER"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+                            } else {
+                                obj.render(g2);
+                            }
+                        }
+                    } else if (obj.getId() == IdObject.ENEMY) {
+                        if (assetManager.getSprite("ENEMY") != null) {
+                            g2.drawImage(assetManager.getSprite("ENEMY"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+                        } else {
+                            obj.render(g2);
+                        }
+                    } else if (obj.getId() == IdObject.BOMB) {
+                        g2.setColor(Color.ORANGE);
+                        g2.fillOval((int) obj.getX() + 4, (int) obj.getY() + 4, tileSize - 8, tileSize - 8);
+                    } else if (obj.getId() == IdObject.FLAME) {
+                        g2.setColor(Color.RED);
+                        g2.fillRect((int) obj.getX(), (int) obj.getY(), tileSize, tileSize);
                     }
+                    current = current.next;
                 }
 
-                // ==================================================
-                // SỬA LỖI VẼ NHÂN VẬT (FAKER): Chỉ cần gọi 1 lần
-                // ==================================================
-                if (assetManager.getSprite("PLAYER") != null) {
-                    boolean invincible = System.currentTimeMillis() < invincibleUntil;
-                    if (!invincible || System.currentTimeMillis() / 100 % 2 == 0) {
-                        g2.drawImage(assetManager.getSprite("PLAYER"), playerX, playerY, tileSize, tileSize, null);
-                    }
-                }
-
-                // VẼ ĐIỂM SỐ và số mạng Ở GÓC PHẢI PHÍA TRÊN
+                // Render UI (Điểm & Mạng)
                 g2.setColor(Color.WHITE);
                 g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 24));
-                String scoreText = "Score: " + score;
                 g2.drawString("Lives: " + playerLives, 20, 40);
-                // Tọa độ X tính bằng cách lấy chiều rộng màn hình trừ đi độ dài chữ
-                int stringWidth = g2.getFontMetrics().stringWidth(scoreText);
-                g2.drawString(scoreText, screenWidth - stringWidth - 20, 40);
+                String scoreText = "Score: " + score;
+                g2.drawString(scoreText, screenWidth - g2.getFontMetrics().stringWidth(scoreText) - 20, 40);
             }
 
+            // Giao diện Game Over / Pause / Victory (Giữ nguyên của bạn)
             if (gameState == GameState.PAUSE && !isGameOver) {
                 g2.setColor(new Color(0, 0, 0, 150));
                 g2.fillRect(0, 0, screenWidth, screenHeight);
                 g2.setColor(Color.WHITE);
                 g2.setFont(g2.getFont().deriveFont(30f));
-                String text = "GAME PAUSED";
-                int x = screenWidth / 2 - g2.getFontMetrics().stringWidth(text) / 2;
-g2.drawString(text, x, screenHeight / 2);
-
-                // 2. Chữ Hướng dẫn (THÊM MỚI VÀO ĐÂY)
-                g2.setFont(g2.getFont().deriveFont(20f)); // Giảm kích thước font chữ xuống 20
-                String subText = "Press Esc to go back to the menu or P to continue";
-                int subX = screenWidth / 2 - g2.getFontMetrics().stringWidth(subText) / 2;
-                g2.drawString(subText, subX, screenHeight / 2 + 40); // Đẩy y xuống 40 pixel so với chữ gốc
-            }
-
-            if (isGameOver) {
-                g2.setColor(new Color(0, 0, 0, 180));
-                g2.fillRect(0, 0, screenWidth, screenHeight);
-
-                // 1. Chữ GAME OVER (Đẩy lên cao hơn một chút)
-                g2.setColor(Color.RED);
-                g2.setFont(g2.getFont().deriveFont(50f));
-                String textGameOver = "GAME OVER";
-                int textX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textGameOver) / 2;
-                g2.drawString(textGameOver, textX, screenHeight / 2 - 40);
-
-                // 2. BỔ SUNG: Chữ hiển thị Điểm số (Nằm ở chính giữa)
-                g2.setColor(Color.WHITE);
-                g2.setFont(g2.getFont().deriveFont(30f));
-                String textScore = "Score: " + score;
-                int textScoreX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textScore) / 2;
-                g2.drawString(textScore, textScoreX, screenHeight / 2);
-
-                // 3. Chữ Hướng dẫn chơi lại (Đẩy xuống dưới)
+                g2.drawString("GAME PAUSED", screenWidth / 2 - 100, screenHeight / 2);
                 g2.setFont(g2.getFont().deriveFont(20f));
-                String textPlayAgain = "Press SPACE to Play Again";
-                int textPlayX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textPlayAgain) / 2;
-                g2.drawString(textPlayAgain, textPlayX, screenHeight / 2 + 40);
-
-                // 4. Chữ Hướng dẫn về Menu (Đẩy xuống dưới cùng)
-                String textMenu = "Press ESC to Back to Menu";
-                int textMenuX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textMenu) / 2;
-                g2.drawString(textMenu, textMenuX, screenHeight / 2 + 70);
-            } else if (isVictory) {
+                g2.drawString("Press Esc to go back to the menu or P to continue", screenWidth / 2 - 230, screenHeight / 2 + 40);
+            } else if (isGameOver || isVictory) {
                 g2.setColor(new Color(0, 0, 0, 180));
                 g2.fillRect(0, 0, screenWidth, screenHeight);
-
-                g2.setColor(Color.YELLOW);
+                g2.setColor(isVictory ? Color.YELLOW : Color.RED);
                 g2.setFont(g2.getFont().deriveFont(50f));
-                String textVictory = "VICTORY";
-                int textX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textVictory) / 2;
-                g2.drawString(textVictory, textX, screenHeight / 2 - 50);
+                g2.drawString(isVictory ? "VICTORY" : "GAME OVER", screenWidth / 2 - (isVictory ? 100 : 130), screenHeight / 2 - 40);
 
                 g2.setColor(Color.WHITE);
                 g2.setFont(g2.getFont().deriveFont(30f));
-                String textScore = "Score: " + score;
-                int textScoreX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textScore) / 2;
-                g2.drawString(textScore, textScoreX, screenHeight / 2 - 10);
-g2.setFont(g2.getFont().deriveFont(20f));
-                String textPlayAgain = "Press SPACE to Play Again";
-                int textPlayX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textPlayAgain) / 2;
-                g2.drawString(textPlayAgain, textPlayX, screenHeight / 2 + 30);
+                g2.drawString("Score: " + score, screenWidth / 2 - 70, screenHeight / 2);
 
-                String textMenu = "Press ESC to Back to Menu";
-                int textMenuX = screenWidth / 2 - g2.getFontMetrics().stringWidth(textMenu) / 2;
-                g2.drawString(textMenu, textMenuX, screenHeight / 2 + 60);
+                g2.setFont(g2.getFont().deriveFont(20f));
+                g2.drawString("Press SPACE to " + (isVictory ? "Continue" : "Play Again"), screenWidth / 2 - 120, screenHeight / 2 + 40);
+                g2.drawString("Press ESC to Back to Menu", screenWidth / 2 - 125, screenHeight / 2 + 70);
             }
-
-            g2.dispose();
         }
-
+        g2.dispose();
     }
-    // --- HÀM VẼ MENU CHÍNH ---
 
+    // --- CÁC HÀM VẼ GIAO DIỆN (Đã sửa lỗi khai báo lửng lơ vòng lặp) ---
     private void drawMenu(Graphics2D g2) {
-        // Vẽ nền tối cho Menu
         g2.setColor(new Color(20, 20, 30));
         g2.fillRect(0, 0, screenWidth, screenHeight);
-
-        // Vẽ Tiêu đề Game
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
         g2.setColor(Color.YELLOW);
-        String title = "BOMBERMAN CSD201";
-        int x = screenWidth / 2 - g2.getFontMetrics().stringWidth(title) / 2;
-        g2.drawString(title, x, 120);
+        g2.drawString("BOMBERMAN CSD201", screenWidth / 2 - 250, 120);
 
-        // Danh sách các tùy chọn nút
         String[] options = {"START GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD", "QUIT"};
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 26));
-
         for (int i = 0; i < options.length; i++) {
-            String optionText = options[i];
-            int textX = screenWidth / 2 - g2.getFontMetrics().stringWidth(optionText) / 2;
-            int textY = 240 + (i * 60);
-
             if (i == menuOption) {
                 g2.setColor(Color.CYAN);
-                // Vẽ mũi tên trỏ vào nút đang chọn (Ứng dụng tư duy con trỏ cấu trúc dữ liệu)
-                g2.drawString("> " + optionText + " <", textX - 30, textY);
+                g2.drawString("> " + options[i] + " <", screenWidth / 2 - 120, 240 + (i * 60));
             } else {
                 g2.setColor(Color.WHITE);
-                g2.drawString(optionText, textX, textY);
+                g2.drawString(options[i], screenWidth / 2 - 90, 240 + (i * 60));
             }
         }
-
-        // Gợi ý điều khiển bên dưới
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
         g2.setColor(Color.red);
-        String hint = "Use W/S to Navigate | Press ENTER to Select | press Esc to exit";
-        int hintX = screenWidth / 2 - g2.getFontMetrics().stringWidth(hint) / 2;
-        g2.drawString(hint, hintX, screenHeight - 450);
+        g2.drawString("Use W/S to Navigate | Press ENTER to Select | press Esc to exit", screenWidth / 2 - 270, screenHeight - 50);
     }
 
-    // --- HÀM VẼ HƯỚNG DẪN (TUTORIAL) ---
+    private void drawMapSelection(Graphics2D g2) {
+        g2.setColor(new Color(20, 20, 30));
+        g2.fillRect(0, 0, screenWidth, screenHeight);
+        g2.setColor(Color.YELLOW);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
+        g2.drawString("SELECT MAP", screenWidth / 2 - 150, 150);
+        g2.setColor(Color.CYAN);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
+        g2.drawString("<   " + mapList[currentMapIndex] + "   >", screenWidth / 2 - 200, screenHeight / 2);
+        g2.setColor(Color.WHITE);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
+        g2.drawString((currentMapIndex + 1) + " / " + mapList.length, screenWidth / 2 - 30, screenHeight / 2 + 50);
+        g2.setColor(Color.RED);
+        g2.drawString("Use A/D to Choose | ENTER to Play | ESC to Return", screenWidth / 2 - 230, screenHeight - 80);
+    }
+
     private void drawTutorial(Graphics2D g2) {
         g2.setColor(new Color(30, 40, 40));
         g2.fillRect(0, 0, screenWidth, screenHeight);
-
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
         g2.setColor(Color.WHITE);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
         g2.drawString("TUTORIAL", 50, 80);
-
-        // VÙNG TRỐNG ĐỂ BẠN ĐIỀN THÔNG TIN CHI TIẾT
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
         g2.setColor(Color.LIGHT_GRAY);
-
         g2.drawString("- Press W, A, S, D to Move the Player.", 70, 160);
-g2.drawString("- Press SPACE to Place a Bomb.", 70, 210);
+        g2.drawString("- Press SPACE to Place a Bomb.", 70, 210);
         g2.drawString("- Avoid Flame and Enemies to survive.", 70, 260);
         g2.drawString("- press P to pause the game.", 70, 310);
-
-        // Nút bấm quay lại
         drawBackButtonHint(g2);
     }
 
-    // --- HÀM VẼ THÔNG TIN (ABOUT US) ---
     private void drawAboutUs(Graphics2D g2) {
         g2.setColor(new Color(40, 30, 40));
         g2.fillRect(0, 0, screenWidth, screenHeight);
-
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
         g2.setColor(Color.WHITE);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
         g2.drawString("ABOUT US", 50, 80);
-
-        // VÙNG TRỐNG ĐỂ BẠN ĐIỀN THÔNG TIN THÀNH VIÊN NHÓM
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
         g2.setColor(Color.LIGHT_GRAY);
-
         g2.drawString("Course: Data Structures and Algorithms (CSD201)", 70, 160);
         g2.drawString("Institution: FPT University", 70, 210);
         g2.drawString("[CE200304 - Nguyễn Trần Khả Nhân - leader]", 70, 260);
@@ -781,84 +556,34 @@ g2.drawString("- Press SPACE to Place a Bomb.", 70, 210);
         drawBackButtonHint(g2);
     }
 
-    // Hàm lưu điểm theo định dạng dấu phẩy của bạn
-    public void saveScoreToLeaderboard() {
-        try (java.io.FileWriter fw = new java.io.FileWriter("duong_dan_file_cua_ban.txt", true); java.io.PrintWriter pw = new java.io.PrintWriter(fw)) {
-            pw.println(playerName + "," + score); // Định dạng Name,Score[cite: 4]
-        } catch (java.io.IOException e) {
-            System.out.println("Lỗi lưu điểm: " + e.getMessage());
-        }
-    }
-
-    // --- HÀM VẼ BẢNG XẾP HẠNG (LEADERBOARD) ---
     private void drawLeaderboard(Graphics2D g2) {
         g2.setColor(new Color(20, 30, 20));
         g2.fillRect(0, 0, screenWidth, screenHeight);
-
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
         g2.setColor(Color.blue);
+        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
         g2.drawString("TOP LEADERS", 50, 80);
-
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
         g2.setColor(Color.WHITE);
 
-        // Nơi bạn có thể duyệt cây ScoreBST hoặc hiển thị danh sách tĩnh mẫu
         String[] lines = scoreBoard.getLeaderboard().split("\n");
-
-        int y = 130; // Đẩy danh sách lên trên (trước đây là 210)
-
+        int y = 130;
         int count = 0;
         for (String line : lines) {
-            // Loại bỏ các dòng trống
             if (line != null && !line.trim().isEmpty()) {
                 g2.drawString(line, 80, y);
-                y += 35; // Giảm khoảng cách giữa các dòng xuống 35
+                y += 35;
                 count++;
             }
-            
-            // Ngắt vòng lặp nếu đã vẽ đủ top 10
-if (count >= 10) {
-                break; 
+            if (count >= 10) {
+                break;
             }
         }
-
         drawBackButtonHint(g2);
     }
 
-    private void drawMapSelection(Graphics2D g2) {
-        g2.setColor(new Color(20, 20, 30));
-        g2.fillRect(0, 0, screenWidth, screenHeight);
-
-        g2.setColor(Color.YELLOW);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
-        String title = "SELECT MAP";
-        int titleX = screenWidth / 2 - g2.getFontMetrics().stringWidth(title) / 2;
-        g2.drawString(title, titleX, 150);
-
-        g2.setColor(Color.CYAN);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
-        String mapName = "<   " + mapList[currentMapIndex] + "   >";
-        int mapX = screenWidth / 2 - g2.getFontMetrics().stringWidth(mapName) / 2;
-        g2.drawString(mapName, mapX, screenHeight / 2);
-
-        g2.setColor(Color.WHITE);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
-        String progress = (currentMapIndex + 1) + " / " + mapList.length;
-        int progX = screenWidth / 2 - g2.getFontMetrics().stringWidth(progress) / 2;
-        g2.drawString(progress, progX, screenHeight / 2 + 50);
-
-        // Hướng dẫn thao tác với phím A/D
-        g2.setColor(Color.RED);
-        String hint = "Use A/D to Choose | ENTER to Play | ESC to Return";
-        int hintX = screenWidth / 2 - g2.getFontMetrics().stringWidth(hint) / 2;
-        g2.drawString(hint, hintX, screenHeight - 80);
-    }
-
-    // Gợi ý phím thoát ở góc màn hình phụ
     private void drawBackButtonHint(Graphics2D g2) {
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.ITALIC, 16));
         g2.setColor(Color.ORANGE);
         g2.drawString("<- Press ESC to Return Menu", 40, screenHeight - 50);
     }
-
 }

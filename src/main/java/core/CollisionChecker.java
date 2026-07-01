@@ -1,33 +1,47 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package core;
 
 import java.awt.Rectangle;
-    
-/**
- *
- * @author Nguyen Minh Phat - CE201621
- */
+import map.MapManager;
+
 public class CollisionChecker {
 
+    private MapManager mapM;
+    private final int tileSize = 48;
+
+    // Truyền MapManager vào để đọc ma trận bản đồ
+    public CollisionChecker(MapManager mapM) {
+        this.mapM = mapM;
+    }
+
     public boolean checkTile(Rectangle hitbox) {
-
+        // 1. Kiểm tra viền màn hình
         if (hitbox.x < 0 || hitbox.y < 0) {
-            return true; // Bị chạm viền trái/trên
+            return true;
         }
-        // Giả sử screenWidth = 720, screenHeight = 624 (Lấy từ GamePanel)
         if (hitbox.x + hitbox.width > 720 || hitbox.y + hitbox.height > 624) {
-            return true; // Bị chạm viền phải/dưới
+            return true;
         }
 
-        return false; // Không chạm gì cả
+        // 2. Kiểm tra gạch/tường từ ma trận của Người số 3
+        if (mapM != null) {
+            int leftCol = hitbox.x / tileSize;
+            int rightCol = (hitbox.x + hitbox.width - 1) / tileSize;
+            int topRow = hitbox.y / tileSize;
+            int bottomRow = (hitbox.y + hitbox.height - 1) / tileSize;
+
+            if (leftCol >= 0 && rightCol < 15 && topRow >= 0 && bottomRow < 13) {
+                int[][] map = mapM.getMapMatrix();
+                // 1: Tường cứng, 2: Gạch mềm
+                if (map[topRow][leftCol] != 0 || map[topRow][rightCol] != 0
+                        || map[bottomRow][leftCol] != 0 || map[bottomRow][rightCol] != 0) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean checkEntity(Rectangle hitboxA, Rectangle hitboxB) {
-        // Trong Java, class Rectangle đã hỗ trợ sẵn thuật toán AABB (Axis-Aligned Bounding Box)
-        // để kiểm tra xem 2 khối hình chữ nhật có đè lên nhau không.
         return hitboxA.intersects(hitboxB);
     }
 }
