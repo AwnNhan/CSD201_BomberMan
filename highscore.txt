@@ -8,6 +8,7 @@ op,0
 op,0
 ko,0
 ko,0
+q,0
 Current,100
 guma,100
 chovy,200

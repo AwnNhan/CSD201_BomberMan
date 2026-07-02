@@ -15,7 +15,8 @@ import java.awt.Rectangle;
  * @author Nguyen Minh Phat - CE201621
  */
 public class Player extends GameObject {
-
+private String direction = "DOWN";
+private boolean facingLeft = false;
     private KeyHandler keyH;
     private CollisionChecker cChecker;
     private double speed;
@@ -35,12 +36,18 @@ public class Player extends GameObject {
         double nextY = getY();
 
         if (keyH.upPressed) {
+             direction = "UP";
             nextY -= speed;
         } else if (keyH.downPressed) {
+             direction = "DOWN";
             nextY += speed;
         } else if (keyH.leftPressed) {
+            direction = "LEFT";
+             facingLeft = true;
             nextX -= speed;
         } else if (keyH.rightPressed) {
+            direction = "RIGHT";
+             facingLeft = false;
             nextX += speed;
         }
 
@@ -65,4 +72,14 @@ public class Player extends GameObject {
 
         return true;
     }
+    public String getDirection()
+{
+    return direction;
+}
+
+
+public boolean isFacingLeft()
+{
+    return facingLeft;
+}
 }
