@@ -75,6 +75,10 @@ public class GamePanel extends JPanel implements Runnable {
 
         assetManager.loadImage("PLAYER", "/sprites/player.png");
         assetManager.loadImage("ENEMY", "/sprites/enemy.png");
+        assetManager.loadImage("PLAYER_UP", "/sprites/player_up.png");
+        assetManager.loadImage("PLAYER_DOWN", "/sprites/player_down.png");
+        assetManager.loadImage("ENEMY_UP", "/sprites/enemy_up.png");
+        assetManager.loadImage("ENEMY_DOWN", "/sprites/enemy_down.png");
     }
 
     public void startGameThread() {
@@ -424,17 +428,63 @@ public class GamePanel extends JPanel implements Runnable {
 
                     if (obj.getId() == IdObject.PLAYER) {
                         if (System.currentTimeMillis() > invincibleUntil || System.currentTimeMillis() / 100 % 2 == 0) {
-                            if (assetManager.getSprite("PLAYER") != null) {
-                                g2.drawImage(assetManager.getSprite("PLAYER"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+                            String dir = player.getDirection();
+
+                            if ("UP".equals(dir)) {
+                                g2.drawImage(assetManager.getSprite("PLAYER_UP"),
+                                        (int) player.getX(), (int) player.getY(), tileSize, tileSize, null);
+
+                            } else if ("DOWN".equals(dir)) {
+                                g2.drawImage(assetManager.getSprite("PLAYER_DOWN"),
+                                        (int) player.getX(), (int) player.getY(), tileSize, tileSize, null);
+
+                            } else {
+                                // Xử lý riêng cho đi ngang (trái/phải) dùng ảnh "PLAYER"
+                                if (player.isFacingLeft()) {
+                                    g2.drawImage(assetManager.getSprite("PLAYER"),
+                                            (int) player.getX() + tileSize, (int) player.getY(),
+                                            -tileSize, tileSize, null);
+                                } else {
+                                    g2.drawImage(assetManager.getSprite("PLAYER"),
+                                            (int) player.getX(), (int) player.getY(),
+                                            tileSize, tileSize, null);
+                                }
+                            }
+                        } else {
+                            obj.render(g2);
+                        }
+                    } else if (obj.getId() == IdObject.ENEMY) {
+                        Enemy e = (Enemy) obj;
+                        String direction = e.getDirection();
+
+                        // Dùng equalsIgnoreCase để đảm bảo luôn khớp dù là "up" hay "UP"
+                        if ("UP".equalsIgnoreCase(direction)) {
+
+                            g2.drawImage(assetManager.getSprite("ENEMY_UP"),
+                                    (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+
+                        } else if ("DOWN".equalsIgnoreCase(direction)) {
+
+                            g2.drawImage(assetManager.getSprite("ENEMY_DOWN"),
+                                    (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+
+                        } else if ("LEFT".equalsIgnoreCase(direction)) {
+
+                            // Lật ảnh ENEMY mặc định cho hướng trái
+                            g2.drawImage(assetManager.getSprite("ENEMY"),
+                                    (int) obj.getX() + tileSize, (int) obj.getY(),
+                                    -tileSize, tileSize, null);
+
+                        } else {
+
+                            // Hướng phải (right) hoặc mặc định
+                            if (assetManager.getSprite("ENEMY") != null) {
+                                g2.drawImage(assetManager.getSprite("ENEMY"),
+                                        (int) obj.getX(), (int) obj.getY(),
+                                        tileSize, tileSize, null);
                             } else {
                                 obj.render(g2);
                             }
-                        }
-                    } else if (obj.getId() == IdObject.ENEMY) {
-                        if (assetManager.getSprite("ENEMY") != null) {
-                            g2.drawImage(assetManager.getSprite("ENEMY"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
-                        } else {
-                            obj.render(g2);
                         }
                     } else if (obj.getId() == IdObject.BOMB) {
                         g2.setColor(Color.ORANGE);

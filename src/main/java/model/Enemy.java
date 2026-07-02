@@ -10,7 +10,7 @@ public class Enemy extends GameObject {
     
     private int speed = 2; // Tốc độ di chuyển (Nên để số nguyên chẵn như 2 để khớp Grid 48)
     private int currentDir = -1; // Hướng hiện tại: 0=Lên, 1=Xuống, 2=Trái, 3=Phải
-    
+    private String direction = "DOWN";
     private static final int TILE_SIZE = 48; 
     private int[][] currentMap;
     private Random random = new Random();
@@ -41,10 +41,14 @@ public class Enemy extends GameObject {
         }
 
         // Cứ thế tiếp tục bước đi theo hướng đã chọn
-        if (currentDir == 0) this.setY(this.Y - speed); // Lên
-        else if (currentDir == 1) this.setY(this.Y + speed); // Xuống
-        else if (currentDir == 2) this.setX(this.X - speed); // Trái
-        else if (currentDir == 3) this.setX(this.X + speed); // Phải
+        if (currentDir == 0) {this.setY(this.Y - speed); // Lên
+          direction = "UP";}
+        else if (currentDir == 1) {this.setY(this.Y + speed); // Xuống
+          direction = "DOWN";}
+        else if (currentDir == 2) {this.setX(this.X - speed); // Trái
+          direction = "LEFT";}        
+        else if (currentDir == 3) {this.setX(this.X + speed); // Phải
+          direction = "RIGHT";}
 
         return true; 
     }
@@ -69,4 +73,8 @@ public class Enemy extends GameObject {
         g.fillRect((int)getX(), (int)getY(), getWidth(), getHeight());
         return true; 
     }
+     public String getDirection()
+{
+    return direction;
+}
 }
