@@ -28,4 +28,6 @@ public class Bomb extends GameObject {
         // Hàm này tạm thời để trống hoặc nhóm bạn gọi vẽ hình ảnh sau
         return true;
     }
+    
+    
 }
