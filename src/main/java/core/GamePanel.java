@@ -1,17 +1,15 @@
 package core;
 
+import algorithm.CustomLinkedList;
 import algorithm.GraphConverter;
 import algorithm.MinHeapQueue;
 import algorithm.ScoreBST;
-import algorithm.CustomLinkedList; // Sử dụng danh sách O(1) của Người số 2
-
+import config.LevelConfig;
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
-import java.awt.Rectangle;
 import javax.swing.JPanel;
-
 import map.MapManager;
 import model.Bomb;
 import model.Enemy;
@@ -54,7 +52,7 @@ public class GamePanel extends JPanel implements Runnable {
     GraphConverter graphConverter = new GraphConverter();
     public CollisionChecker cChecker;
     public CustomLinkedList objectList; // Băng chuyền O(1)
-    public Player player;               // Thay cho playerX, playerY
+    public Player player;
 
     private MinHeapQueue bombQueue;
     private long lastBombTime = 0;
@@ -109,8 +107,12 @@ public class GamePanel extends JPanel implements Runnable {
 
     private void resetGame() {
         mapM = new MapManager();
-        String selectedMapPath = "/maps/map0" + (currentMapIndex + 1) + ".txt";
-        mapM.loadMap(selectedMapPath);
+
+        // 1. LẤY CẤU HÌNH CỦA LEVEL HIỆN TẠI TỪ PACKAGE CONFIG
+        LevelConfig currentConfig = config.LevelManager.getLevel(currentMapIndex);
+
+        // 2. NẠP FILE MAP TƯƠNG ỨNG VỚI LEVEL ĐÓ
+        mapM.loadMap(currentConfig.getMapFilePath());
 
         cChecker = new CollisionChecker(mapM);
         graphConverter.updateGraph(mapM.getMapMatrix());
@@ -131,10 +133,20 @@ public class GamePanel extends JPanel implements Runnable {
         player = new Player(tileSize, tileSize, keyH, cChecker);
         objectList.addLast(player);
 
-        // Khởi tạo Quái vật và nạp lên băng chuyền
-        objectList.addLast(new Enemy(tileSize * 13, tileSize * 1));
-        objectList.addLast(new Enemy(tileSize * 1, tileSize * 11));
-        objectList.addLast(new Enemy(tileSize * 13, tileSize * 11));
+        // 3. SINH QUÁI VẬT TỰ ĐỘNG DỰA TRÊN SỐ LƯỢNG VÀ TỐC ĐỘ CỦA LEVEL
+        // Thay vì addLast 3 con quái cố định, ta dùng vòng lặp theo Config:
+        int addedEnemies = 0;
+        int[][] matrix = mapM.getMapMatrix();
+
+        for (int r = maxScreenRow - 1; r >= 0 && addedEnemies < currentConfig.getEnemyCount(); r--) {
+            for (int c = maxScreenCol - 1; c >= 0 && addedEnemies < currentConfig.getEnemyCount(); c--) {
+                // Chỉ sinh quái ở những ô đường trống (giá trị 0) và xa nhân vật
+                if (matrix[r][c] == 0 && (r > 3 || c > 3)) {
+                    objectList.addLast(new Enemy(c * tileSize, r * tileSize, currentConfig.getEnemySpeed()));
+                    addedEnemies++;
+                }
+            }
+        }
 
         gameState = GameState.PLAYING;
     }
@@ -256,7 +268,7 @@ public class GamePanel extends JPanel implements Runnable {
                 keyH.spacePressed = false;
             }
 
-            // 2. KÍCH NỔ BOM 
+            // 2. KÍCH NỔ BOM
             if (!bombQueue.isEmpty() && currentTimeMs >= bombQueue.peek().getTimeToExplode()) {
                 Bomb b = bombQueue.dequeue();
 

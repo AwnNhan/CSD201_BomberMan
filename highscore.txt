@@ -10,8 +10,11 @@ ko,0
 ko,0
 phat,0
 phat,0
+Player,0
 Current,100
 guma,100
+Player,100
+Player,100
 chovy,200
 chovy,200
 Current,200
