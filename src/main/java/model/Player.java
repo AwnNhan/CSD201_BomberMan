@@ -4,8 +4,8 @@
  */
 package model;
 
-import core.KeyHandler;
 import core.CollisionChecker;
+import core.KeyHandler;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Rectangle;
@@ -15,8 +15,9 @@ import java.awt.Rectangle;
  * @author Nguyen Minh Phat - CE201621
  */
 public class Player extends GameObject {
-private String direction = "DOWN";
-private boolean facingLeft = false;
+
+    private String direction = "DOWN";
+    private boolean facingLeft = false;
     private KeyHandler keyH;
     private CollisionChecker cChecker;
     private double speed;
@@ -35,30 +36,85 @@ private boolean facingLeft = false;
         double nextX = getX();
         double nextY = getY();
 
+        boolean movingX = false;
+        boolean movingY = false;
+
         if (keyH.upPressed) {
-             direction = "UP";
+            direction = "UP";
             nextY -= speed;
+            movingY = true;
         } else if (keyH.downPressed) {
-             direction = "DOWN";
+            direction = "DOWN";
             nextY += speed;
+            movingY = true;
         } else if (keyH.leftPressed) {
             direction = "LEFT";
-             facingLeft = true;
+            facingLeft = true;
             nextX -= speed;
+            movingX = true;
         } else if (keyH.rightPressed) {
             direction = "RIGHT";
-             facingLeft = false;
+            facingLeft = false;
             nextX += speed;
+            movingX = true;
         }
 
-        Rectangle nextHitbox = new Rectangle((int) nextX, (int) nextY, getWidth(), getHeight());
+        int margin = 6;
+        int assistThreshold = 16;
 
-        if (!cChecker.checkTile(nextHitbox)) {
+        if (movingX) {
+            Rectangle hitboxX = new Rectangle((int) nextX + margin, (int) nextY + margin,
+                    getWidth() - 2 * margin, getHeight() - 2 * margin);
 
-            this.setX(nextX);
-            this.setY(nextY);
+            if (!cChecker.checkTile(hitboxX)) {
+                this.setX(nextX);
+            } else {
+                double centerOfTileY = Math.round(getY() / TILE_SIZE) * TILE_SIZE;
+                double offset = Math.abs(getY() - centerOfTileY);
+
+                if (offset > 0 && offset <= assistThreshold) {
+                    if (getY() < centerOfTileY) {
+                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) getY() + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setY(getY() + Math.min(speed, centerOfTileY - getY()));
+                        }
+                    } else if (getY() > centerOfTileY) {
+                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) (getY() - speed) + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setY(getY() - Math.min(speed, getY() - centerOfTileY));
+                        }
+                    }
+                }
+            }
         }
 
+        if (movingY) {
+            Rectangle hitboxY = new Rectangle((int) getX() + margin, (int) nextY + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+
+            if (!cChecker.checkTile(hitboxY)) {
+                this.setY(nextY); // Dọc trống -> Đi dọc bình thường
+            } else {
+                double centerOfTileX = Math.round(getX() / TILE_SIZE) * TILE_SIZE;
+                double offset = Math.abs(getX() - centerOfTileX);
+
+                // Nếu lệch trong ngưỡng cho phép -> Tự động trượt trái/phải để lọt khe
+                if (offset > 0 && offset <= assistThreshold) {
+                    if (getX() < centerOfTileX) {
+                        Rectangle slideBox = new Rectangle((int) (getX() + speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setX(getX() + Math.min(speed, centerOfTileX - getX()));
+                        }
+                    } else if (getX() > centerOfTileX) {
+                        Rectangle slideBox = new Rectangle((int) (getX() - speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setX(getX() - Math.min(speed, getX() - centerOfTileX));
+                        }
+                    }
+                }
+            }
+        }
         return true;
     }
 
@@ -72,14 +128,12 @@ private boolean facingLeft = false;
 
         return true;
     }
-    public String getDirection()
-{
-    return direction;
-}
 
+    public String getDirection() {
+        return direction;
+    }
 
-public boolean isFacingLeft()
-{
-    return facingLeft;
-}
+    public boolean isFacingLeft() {
+        return facingLeft;
+    }
 }
