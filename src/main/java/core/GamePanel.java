@@ -2,7 +2,6 @@ package core;
 
 import algorithm.CustomLinkedList;
 import algorithm.GraphConverter;
-import algorithm.MinHeapQueue;
 import algorithm.ScoreBST;
 import config.LevelConfig;
 import java.awt.Color;
@@ -33,6 +32,7 @@ public class GamePanel extends JPanel implements Runnable {
     public int menuOption = 0;
 
     public AssetManager assetManager = new AssetManager();
+
     public UIManager uiManager = new UIManager();
     public ScoreBST scoreBoard = new ScoreBST();
     Thread gameThread;
@@ -47,15 +47,15 @@ public class GamePanel extends JPanel implements Runnable {
     public String[] mapList = {"Map 1 (Default)", "Map 2 (Coming Soon)", "Map 3", "Map 4"};
     public int currentMapIndex = 0;
 
-    // === HỆ THỐNG QUẢN LÝ MỚI: XÓA ARRAYLIST VÀ BIẾN RỜI RẠC ===
+    // === HỆ THỐNG QUẢN LÝ MỚI ===
     MapManager mapM;
     GraphConverter graphConverter = new GraphConverter();
     public CollisionChecker cChecker;
     public CustomLinkedList objectList; // Băng chuyền O(1)
     public Player player;
 
-    private MinHeapQueue bombQueue;
-    private long lastBombTime = 0;
+    // Khai báo Quản lý bom mới
+    public BombManager bombManager;
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -69,7 +69,9 @@ public class GamePanel extends JPanel implements Runnable {
         graphConverter.updateGraph(mapM.getMapMatrix());
 
         objectList = new CustomLinkedList();
-        bombQueue = new MinHeapQueue();
+
+        // Khởi tạo BombManager
+        bombManager = new BombManager(this);
 
         assetManager.loadImage("PLAYER", "/sprites/player.png");
         assetManager.loadImage("ENEMY", "/sprites/enemy.png");
@@ -77,6 +79,7 @@ public class GamePanel extends JPanel implements Runnable {
         assetManager.loadImage("PLAYER_DOWN", "/sprites/player_down.png");
         assetManager.loadImage("ENEMY_UP", "/sprites/enemy_up.png");
         assetManager.loadImage("ENEMY_DOWN", "/sprites/enemy_down.png");
+        assetManager.loadImage("BOMB_COOL", "/sprites/atomic_bomb.png");
     }
 
     public void startGameThread() {
@@ -117,10 +120,9 @@ public class GamePanel extends JPanel implements Runnable {
         cChecker = new CollisionChecker(mapM);
         graphConverter.updateGraph(mapM.getMapMatrix());
 
-        // Reset hệ thống
+        // Reset hệ thống danh sách vật thể và bom
         objectList = new CustomLinkedList();
-        bombQueue = new MinHeapQueue();
-        lastBombTime = 0;
+        bombManager.reset();
 
         if (!isVictory) {
             playerLives = 2;
@@ -134,7 +136,6 @@ public class GamePanel extends JPanel implements Runnable {
         objectList.addLast(player);
 
         // 3. SINH QUÁI VẬT TỰ ĐỘNG DỰA TRÊN SỐ LƯỢNG VÀ TỐC ĐỘ CỦA LEVEL
-        // Thay vì addLast 3 con quái cố định, ta dùng vòng lặp theo Config:
         int addedEnemies = 0;
         int[][] matrix = mapM.getMapMatrix();
 
@@ -243,64 +244,18 @@ public class GamePanel extends JPanel implements Runnable {
 
         // --- LOGIC PLAYING CHÍNH THỨC ---
         if (gameState == GameState.PLAYING) {
-            long currentTimeMs = System.currentTimeMillis();
 
-            // 1. ĐẶT BOM
-            if (keyH.spacePressed && currentTimeMs - lastBombTime >= 500) {
-                int bombX = ((int) player.getX() + tileSize / 2) / tileSize * tileSize;
-                int bombY = ((int) player.getY() + tileSize / 2) / tileSize * tileSize;
+            // 1. Giao việc quản lý đặt bom cho BombManager
+            bombManager.handlePlacingBomb(player, keyH);
 
-                boolean hasBombHere = false;
-                CustomLinkedList.Node temp = objectList.head;
-                while (temp != null) {
-                    if (temp.data.getId() == IdObject.BOMB && temp.data.getX() == bombX && temp.data.getY() == bombY) {
-                        hasBombHere = true;
-                    }
-                    temp = temp.next;
-                }
+            // 2. Giao việc kiểm tra kích nổ cho BombManager
+            bombManager.updateBombs();
 
-                if (!hasBombHere) {
-                    Bomb b = new Bomb(bombX, bombY, tileSize, tileSize, IdObject.BOMB, currentTimeMs + 3000);
-                    bombQueue.enqueue(b);
-                    objectList.addLast(b);
-                    lastBombTime = currentTimeMs;
-                }
-                keyH.spacePressed = false;
-            }
-
-            // 2. KÍCH NỔ BOM
-            if (!bombQueue.isEmpty() && currentTimeMs >= bombQueue.peek().getTimeToExplode()) {
-                Bomb b = bombQueue.dequeue();
-
-                // Gỡ bom khỏi băng chuyền và thả lửa
-                CustomLinkedList.Node temp = objectList.head;
-                while (temp != null) {
-                    if (temp.data == b) {
-                        objectList.removeNode(temp);
-                        break;
-                    }
-                    temp = temp.next;
-                }
-                executeExplosion(b);
-            }
-
-            // Tạo map phụ chứa bom để quái né
-            int[][] mapWithBombs = new int[maxScreenRow][maxScreenCol];
-            int[][] originalMap = mapM.getMapMatrix();
-            for (int r = 0; r < maxScreenRow; r++) {
-                System.arraycopy(originalMap[r], 0, mapWithBombs[r], 0, maxScreenCol);
-            }
-
-            CustomLinkedList.Node t = objectList.head;
-            while (t != null) {
-                if (t.data.getId() == IdObject.BOMB) {
-                    mapWithBombs[(int) t.data.getY() / tileSize][(int) t.data.getX() / tileSize] = 1;
-                }
-                t = t.next;
-            }
+            // 3. Lấy ma trận map chứa bom để phục vụ AI quái vật né tránh
+            int[][] mapWithBombs = bombManager.generateMapWithBombs();
 
             // =================================================================
-            // 3. VÒNG LẶP UPDATE THẦN THÁNH: O(1) CHO MỌI THAO TÁC XÓA
+            // 4. VÒNG LẶP UPDATE THẦN THÁNH: O(1) CHO MỌI THAO TÁC XÓA
             // =================================================================
             CustomLinkedList.Node current = objectList.head;
             int enemyCount = 0;
@@ -383,37 +338,6 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
-    private void executeExplosion(Bomb bomb) {
-        int bx = (int) bomb.getX();
-        int by = (int) bomb.getY();
-        objectList.addLast(new Flame(bx, by, tileSize, tileSize, IdObject.FLAME));
-
-        int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}};
-        int[][] map = mapM.getMapMatrix();
-
-        for (int[] dir : dirs) {
-            for (int i = 1; i <= 2; i++) { // Flame length = 2
-                int nextCol = bx / tileSize + dir[1] * i;
-                int nextRow = by / tileSize + dir[0] * i;
-
-                if (nextCol < 0 || nextCol >= maxScreenCol || nextRow < 0 || nextRow >= maxScreenRow) {
-                    break;
-                }
-
-                int tileType = map[nextRow][nextCol];
-                if (tileType == 1) {
-                    break; // Kẹt Tường
-                }
-                if (tileType == 2) {
-                    objectList.addLast(new Flame(nextCol * tileSize, nextRow * tileSize, tileSize, tileSize, IdObject.FLAME));
-                    mapM.destroySoftWall(nextRow, nextCol); // Phá gạch
-                    break;
-                }
-                objectList.addLast(new Flame(nextCol * tileSize, nextRow * tileSize, tileSize, tileSize, IdObject.FLAME));
-            }
-        }
-    }
-
     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -451,7 +375,6 @@ public class GamePanel extends JPanel implements Runnable {
                                         (int) player.getX(), (int) player.getY(), tileSize, tileSize, null);
 
                             } else {
-                                // Xử lý riêng cho đi ngang (trái/phải) dùng ảnh "PLAYER"
                                 if (player.isFacingLeft()) {
                                     g2.drawImage(assetManager.getSprite("PLAYER"),
                                             (int) player.getX() + tileSize, (int) player.getY(),
@@ -469,27 +392,20 @@ public class GamePanel extends JPanel implements Runnable {
                         Enemy e = (Enemy) obj;
                         String direction = e.getDirection();
 
-                        // Dùng equalsIgnoreCase để đảm bảo luôn khớp dù là "up" hay "UP"
                         if ("UP".equalsIgnoreCase(direction)) {
-
                             g2.drawImage(assetManager.getSprite("ENEMY_UP"),
                                     (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
 
                         } else if ("DOWN".equalsIgnoreCase(direction)) {
-
                             g2.drawImage(assetManager.getSprite("ENEMY_DOWN"),
                                     (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
 
                         } else if ("LEFT".equalsIgnoreCase(direction)) {
-
-                            // Lật ảnh ENEMY mặc định cho hướng trái
                             g2.drawImage(assetManager.getSprite("ENEMY"),
                                     (int) obj.getX() + tileSize, (int) obj.getY(),
                                     -tileSize, tileSize, null);
 
                         } else {
-
-                            // Hướng phải (right) hoặc mặc định
                             if (assetManager.getSprite("ENEMY") != null) {
                                 g2.drawImage(assetManager.getSprite("ENEMY"),
                                         (int) obj.getX(), (int) obj.getY(),
@@ -499,11 +415,46 @@ public class GamePanel extends JPanel implements Runnable {
                             }
                         }
                     } else if (obj.getId() == IdObject.BOMB) {
-                        g2.setColor(Color.ORANGE);
-                        g2.fillOval((int) obj.getX() + 4, (int) obj.getY() + 4, tileSize - 8, tileSize - 8);
-                    } else if (obj.getId() == IdObject.FLAME) {
-                        g2.setColor(Color.RED);
-                        g2.fillRect((int) obj.getX(), (int) obj.getY(), tileSize, tileSize);
+                        Bomb b = (Bomb) obj;
+                        long currentTime = System.currentTimeMillis();
+                        long timeLeft = b.getTimeToExplode() - currentTime; // Thời gian còn lại cho tới khi nổ (ms)
+
+                        // --- LOGIC CHỚP CHỚP THÔNG MINH ---
+                        boolean shouldDraw = true;
+                        
+                        if (timeLeft > 0) {
+                            if (timeLeft < 1000) {
+                                // Còn dưới 1 giây: Chớp cực nhanh (100ms một lần)
+                                shouldDraw = (currentTime / 100) % 2 == 0; 
+                            } else if (timeLeft < 2000) {
+                                // Còn từ 1 đến 2 giây: Chớp nhanh vừa (200ms một lần)
+                                shouldDraw = (currentTime / 200) % 2 == 0; 
+                            } else {
+                                // Còn trên 2 giây (mới đặt): KHÔNG chớp, luôn hiện hình
+                                shouldDraw = true; 
+                            }
+                        }
+
+                        // Chỉ vẽ quả bom khi nhịp chớp cho phép hiện hình
+                        if (shouldDraw) {
+                            if (assetManager.getSprite("BOMB_COOL") != null) {
+                                int bombWidth = tileSize;
+                                int bombHeight = (int) (tileSize * 1.2);
+                                int drawX = (int) obj.getX();
+                                int drawY = (int) obj.getY() - (bombHeight - tileSize) + 6;
+
+                                g2.drawImage(assetManager.getSprite("BOMB_COOL"), 
+                                        drawX, drawY, bombWidth, bombHeight, null);
+                            } else {
+                                // Dự phòng nếu chưa có ảnh
+                                g2.setColor(Color.ORANGE);
+                                g2.fillOval((int) obj.getX() + 4, (int) obj.getY() + 4, tileSize - 8, tileSize - 8);
+                            }
+                        }
+                    }
+                    else if (obj.getId() == IdObject.FLAME) {
+                        // GỌI HÀM VẼ NỘI TẠI CỦA THỰC THỂ LỬA (Đã sửa đổi ở đây!)
+                        obj.render(g2);
                     }
                     current = current.next;
                 }
@@ -516,7 +467,7 @@ public class GamePanel extends JPanel implements Runnable {
                 g2.drawString(scoreText, screenWidth - g2.getFontMetrics().stringWidth(scoreText) - 20, 40);
             }
 
-            // Giao diện Game Over / Pause / Victory (Giữ nguyên của bạn)
+            // Giao diện Game Over / Pause / Victory
             if (gameState == GameState.PAUSE && !isGameOver) {
                 g2.setColor(new Color(0, 0, 0, 150));
                 g2.fillRect(0, 0, screenWidth, screenHeight);
@@ -544,7 +495,6 @@ public class GamePanel extends JPanel implements Runnable {
         g2.dispose();
     }
 
-    // --- CÁC HÀM VẼ GIAO DIỆN (Đã sửa lỗi khai báo lửng lơ vòng lặp) ---
     private void drawMenu(Graphics2D g2) {
         g2.setColor(new Color(20, 20, 30));
         g2.fillRect(0, 0, screenWidth, screenHeight);
@@ -576,7 +526,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.drawString("SELECT MAP", screenWidth / 2 - 150, 150);
         g2.setColor(Color.CYAN);
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
-        g2.drawString("<   " + mapList[currentMapIndex] + "   >", screenWidth / 2 - 200, screenHeight / 2);
+        g2.drawString("<    " + mapList[currentMapIndex] + "    >", screenWidth / 2 - 200, screenHeight / 2);
         g2.setColor(Color.WHITE);
         g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
         g2.drawString((currentMapIndex + 1) + " / " + mapList.length, screenWidth / 2 - 30, screenHeight / 2 + 50);
