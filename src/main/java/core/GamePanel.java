@@ -338,264 +338,140 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
-    @Override
+     @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
 
         if (gameState == GameState.MENU) {
-            drawMenu(g2);
+            uiManager.drawMenu(g2, menuOption, screenWidth, screenHeight);
         } else if (gameState == GameState.MAP_SELECTION) {
-            drawMapSelection(g2);
+            uiManager.drawMapSelection(g2, mapList, currentMapIndex, screenWidth, screenHeight);
         } else if (gameState == GameState.TUTORIAL) {
-            drawTutorial(g2);
+            uiManager.drawTutorial(g2, screenWidth, screenHeight);
         } else if (gameState == GameState.ABOUT_US) {
-            drawAboutUs(g2);
+            uiManager.drawAboutUs(g2, screenWidth, screenHeight);
         } else if (gameState == GameState.LEADERBOARD) {
-            drawLeaderboard(g2);
+            uiManager.drawLeaderboard(g2, scoreBoard.getLeaderboard(), screenWidth, screenHeight);
         } else {
+            // 1. Vẽ Bản đồ và các Thực thể trong game
             mapM.render(g2);
             if (gameState == GameState.PLAYING || gameState == GameState.PAUSE || isGameOver || isVictory) {
-
-                // --- DUYỆT RENDER TOÀN BỘ VẬT THỂ TRÊN BĂNG CHUYỀN ---
-                CustomLinkedList.Node current = objectList.head;
-                while (current != null) {
-                    GameObject obj = current.data;
-
-                    if (obj.getId() == IdObject.PLAYER) {
-                        if (System.currentTimeMillis() > invincibleUntil || System.currentTimeMillis() / 100 % 2 == 0) {
-                            String dir = player.getDirection();
-
-                            if ("UP".equals(dir)) {
-                                g2.drawImage(assetManager.getSprite("PLAYER_UP"),
-                                        (int) player.getX(), (int) player.getY(), tileSize, tileSize, null);
-
-                            } else if ("DOWN".equals(dir)) {
-                                g2.drawImage(assetManager.getSprite("PLAYER_DOWN"),
-                                        (int) player.getX(), (int) player.getY(), tileSize, tileSize, null);
-
-                            } else {
-                                if (player.isFacingLeft()) {
-                                    g2.drawImage(assetManager.getSprite("PLAYER"),
-                                            (int) player.getX() + tileSize, (int) player.getY(),
-                                            -tileSize, tileSize, null);
-                                } else {
-                                    g2.drawImage(assetManager.getSprite("PLAYER"),
-                                            (int) player.getX(), (int) player.getY(),
-                                            tileSize, tileSize, null);
-                                }
-                            }
-                        } else {
-                            obj.render(g2);
-                        }
-                    } else if (obj.getId() == IdObject.ENEMY) {
-                        Enemy e = (Enemy) obj;
-                        String direction = e.getDirection();
-
-                        if ("UP".equalsIgnoreCase(direction)) {
-                            g2.drawImage(assetManager.getSprite("ENEMY_UP"),
-                                    (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
-
-                        } else if ("DOWN".equalsIgnoreCase(direction)) {
-                            g2.drawImage(assetManager.getSprite("ENEMY_DOWN"),
-                                    (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
-
-                        } else if ("LEFT".equalsIgnoreCase(direction)) {
-                            g2.drawImage(assetManager.getSprite("ENEMY"),
-                                    (int) obj.getX() + tileSize, (int) obj.getY(),
-                                    -tileSize, tileSize, null);
-
-                        } else {
-                            if (assetManager.getSprite("ENEMY") != null) {
-                                g2.drawImage(assetManager.getSprite("ENEMY"),
-                                        (int) obj.getX(), (int) obj.getY(),
-                                        tileSize, tileSize, null);
-                            } else {
-                                obj.render(g2);
-                            }
-                        }
-                    } else if (obj.getId() == IdObject.BOMB) {
-                        Bomb b = (Bomb) obj;
-                        long currentTime = System.currentTimeMillis();
-                        long timeLeft = b.getTimeToExplode() - currentTime; // Thời gian còn lại cho tới khi nổ (ms)
-
-                        // --- LOGIC CHỚP CHỚP THÔNG MINH ---
-                        boolean shouldDraw = true;
-                        
-                        if (timeLeft > 0) {
-                            if (timeLeft < 1000) {
-                                // Còn dưới 1 giây: Chớp cực nhanh (100ms một lần)
-                                shouldDraw = (currentTime / 100) % 2 == 0; 
-                            } else if (timeLeft < 2000) {
-                                // Còn từ 1 đến 2 giây: Chớp nhanh vừa (200ms một lần)
-                                shouldDraw = (currentTime / 200) % 2 == 0; 
-                            } else {
-                                // Còn trên 2 giây (mới đặt): KHÔNG chớp, luôn hiện hình
-                                shouldDraw = true; 
-                            }
-                        }
-
-                        // Chỉ vẽ quả bom khi nhịp chớp cho phép hiện hình
-                        if (shouldDraw) {
-                            if (assetManager.getSprite("BOMB_COOL") != null) {
-                                int bombWidth = tileSize;
-                                int bombHeight = (int) (tileSize * 1.2);
-                                int drawX = (int) obj.getX();
-                                int drawY = (int) obj.getY() - (bombHeight - tileSize) + 6;
-
-                                g2.drawImage(assetManager.getSprite("BOMB_COOL"), 
-                                        drawX, drawY, bombWidth, bombHeight, null);
-                            } else {
-                                // Dự phòng nếu chưa có ảnh
-                                g2.setColor(Color.ORANGE);
-                                g2.fillOval((int) obj.getX() + 4, (int) obj.getY() + 4, tileSize - 8, tileSize - 8);
-                            }
-                        }
-                    }
-                    else if (obj.getId() == IdObject.FLAME) {
-                        // GỌI HÀM VẼ NỘI TẠI CỦA THỰC THỂ LỬA (Đã sửa đổi ở đây!)
-                        obj.render(g2);
-                    }
-                    current = current.next;
-                }
-
-                // Render UI (Điểm & Mạng)
-                g2.setColor(Color.WHITE);
-                g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 24));
-                g2.drawString("Lives: " + playerLives, 20, 40);
-                String scoreText = "Score: " + score;
-                g2.drawString(scoreText, screenWidth - g2.getFontMetrics().stringWidth(scoreText) - 20, 40);
+                renderGameObjects(g2);
+                
+                // 2. Vẽ HUD (Điểm, Mạng sống) qua UIManager
+                uiManager.drawHUD(g2, playerLives, score, screenWidth);
             }
 
-            // Giao diện Game Over / Pause / Victory
+            // 3. Vẽ các màn hình Overlay (Pause / Game Over / Victory) qua UIManager
             if (gameState == GameState.PAUSE && !isGameOver) {
-                g2.setColor(new Color(0, 0, 0, 150));
-                g2.fillRect(0, 0, screenWidth, screenHeight);
-                g2.setColor(Color.WHITE);
-                g2.setFont(g2.getFont().deriveFont(30f));
-                g2.drawString("GAME PAUSED", screenWidth / 2 - 100, screenHeight / 2);
-                g2.setFont(g2.getFont().deriveFont(20f));
-                g2.drawString("Press Esc to go back to the menu or P to continue", screenWidth / 2 - 230, screenHeight / 2 + 40);
+                uiManager.drawPauseScreen(g2, screenWidth, screenHeight);
             } else if (isGameOver || isVictory) {
-                g2.setColor(new Color(0, 0, 0, 180));
-                g2.fillRect(0, 0, screenWidth, screenHeight);
-                g2.setColor(isVictory ? Color.YELLOW : Color.RED);
-                g2.setFont(g2.getFont().deriveFont(50f));
-                g2.drawString(isVictory ? "VICTORY" : "GAME OVER", screenWidth / 2 - (isVictory ? 100 : 130), screenHeight / 2 - 40);
-
-                g2.setColor(Color.WHITE);
-                g2.setFont(g2.getFont().deriveFont(30f));
-                g2.drawString("Score: " + score, screenWidth / 2 - 70, screenHeight / 2);
-
-                g2.setFont(g2.getFont().deriveFont(20f));
-                g2.drawString("Press SPACE to " + (isVictory ? "Continue" : "Play Again"), screenWidth / 2 - 120, screenHeight / 2 + 40);
-                g2.drawString("Press ESC to Back to Menu", screenWidth / 2 - 125, screenHeight / 2 + 70);
+                uiManager.drawEndGameScreen(g2, screenWidth, screenHeight, score, isVictory);
             }
         }
         g2.dispose();
     }
 
-    private void drawMenu(Graphics2D g2) {
-        g2.setColor(new Color(20, 20, 30));
-        g2.fillRect(0, 0, screenWidth, screenHeight);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
-        g2.setColor(Color.YELLOW);
-        g2.drawString("BOMBERMAN CSD201", screenWidth / 2 - 250, 120);
+    // Tách riêng logic vẽ GameObject ra phương thức này cho code sạch sẽ
+    private void renderGameObjects(Graphics2D g2) {
+        CustomLinkedList.Node current = objectList.head;
+        while (current != null) {
+            GameObject obj = current.data;
 
-        String[] options = {"START GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD", "QUIT"};
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 26));
-        for (int i = 0; i < options.length; i++) {
-            if (i == menuOption) {
-                g2.setColor(Color.CYAN);
-                g2.drawString("> " + options[i] + " <", screenWidth / 2 - 120, 240 + (i * 60));
-            } else {
-                g2.setColor(Color.WHITE);
-                g2.drawString(options[i], screenWidth / 2 - 90, 240 + (i * 60));
+            if (obj.getId() == IdObject.PLAYER) {
+                if (System.currentTimeMillis() > invincibleUntil || System.currentTimeMillis() / 100 % 2 == 0) {
+                    String dir = player.getDirection();
+
+                    if ("UP".equalsIgnoreCase(dir)) {
+                        g2.drawImage(assetManager.getSprite("PLAYER_UP"),
+                                (int) player.getX(), (int) player.getY(), tileSize, tileSize, null);
+                    } else if ("DOWN".equalsIgnoreCase(dir)) {
+                        g2.drawImage(assetManager.getSprite("PLAYER_DOWN"),
+                                (int) player.getX(), (int) player.getY(), tileSize, tileSize, null);
+                    } else if ("LEFT".equalsIgnoreCase(dir)) {
+                        g2.drawImage(assetManager.getSprite("PLAYER"),
+                                (int) player.getX() + tileSize, (int) player.getY(),
+                                -tileSize, tileSize, null);
+                    } else {
+                        if (assetManager.getSprite("PLAYER") != null) {
+                            g2.drawImage(assetManager.getSprite("PLAYER"),
+                                    (int) player.getX(), (int) player.getY(),
+                                    tileSize, tileSize, null);
+                        } else {
+                            obj.render(g2);
+                        }
+                    }
+                } else {
+                    obj.render(g2);
+                }
+            } else if (obj.getId() == IdObject.ENEMY) {
+                Enemy e = (Enemy) obj;
+                String direction = e.getDirection();
+
+                if ("UP".equalsIgnoreCase(direction)) {
+                    if (assetManager.getSprite("ENEMY_UP") != null) {
+                        g2.drawImage(assetManager.getSprite("ENEMY_UP"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+                    } else if (assetManager.getSprite("ENEMY") != null) {
+                        g2.drawImage(assetManager.getSprite("ENEMY"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+                    } else {
+                        obj.render(g2);
+                    }
+                } else if ("DOWN".equalsIgnoreCase(direction)) {
+                    if (assetManager.getSprite("ENEMY_DOWN") != null) {
+                        g2.drawImage(assetManager.getSprite("ENEMY_DOWN"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+                    } else if (assetManager.getSprite("ENEMY") != null) {
+                        g2.drawImage(assetManager.getSprite("ENEMY"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
+                    } else {
+                        obj.render(g2);
+                    }
+                } else if ("LEFT".equalsIgnoreCase(direction)) {
+                    g2.drawImage(assetManager.getSprite("ENEMY"),
+                            (int) obj.getX() + tileSize, (int) obj.getY(),
+                            -tileSize, tileSize, null);
+                } else {
+                    if (assetManager.getSprite("ENEMY") != null) {
+                        g2.drawImage(assetManager.getSprite("ENEMY"),
+                                (int) obj.getX(), (int) obj.getY(),
+                                tileSize, tileSize, null);
+                    } else {
+                        obj.render(g2);
+                    }
+                }
+            } else if (obj.getId() == IdObject.BOMB) {
+                Bomb b = (Bomb) obj;
+                long currentTime = System.currentTimeMillis();
+                long timeLeft = b.getTimeToExplode() - currentTime;
+
+                boolean shouldDraw = true;
+                if (timeLeft > 0) {
+                    if (timeLeft < 1000) {
+                        shouldDraw = (currentTime / 100) % 2 == 0;
+                    } else if (timeLeft < 2000) {
+                        shouldDraw = (currentTime / 200) % 2 == 0;
+                    } else {
+                        shouldDraw = true;
+                    }
+                }
+
+                if (shouldDraw) {
+                    if (assetManager.getSprite("BOMB_COOL") != null) {
+                        int bombWidth = tileSize;
+                        int bombHeight = (int) (tileSize * 1.2);
+                        int drawX = (int) obj.getX();
+                        int drawY = (int) obj.getY() - (bombHeight - tileSize) + 6;
+
+                        g2.drawImage(assetManager.getSprite("BOMB_COOL"),
+                                drawX, drawY, bombWidth, bombHeight, null);
+                    } else {
+                        g2.setColor(Color.ORANGE);
+                        g2.fillOval((int) obj.getX() + 4, (int) obj.getY() + 4, tileSize - 8, tileSize - 8);
+                    }
+                }
+            } else if (obj.getId() == IdObject.FLAME) {
+                obj.render(g2);
             }
+            current = current.next;
         }
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
-        g2.setColor(Color.red);
-        g2.drawString("Use W/S to Navigate | Press ENTER to Select | press Esc to exit", screenWidth / 2 - 270, screenHeight - 50);
-    }
-
-    private void drawMapSelection(Graphics2D g2) {
-        g2.setColor(new Color(20, 20, 30));
-        g2.fillRect(0, 0, screenWidth, screenHeight);
-        g2.setColor(Color.YELLOW);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 48));
-        g2.drawString("SELECT MAP", screenWidth / 2 - 150, 150);
-        g2.setColor(Color.CYAN);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
-        g2.drawString("<    " + mapList[currentMapIndex] + "    >", screenWidth / 2 - 200, screenHeight / 2);
-        g2.setColor(Color.WHITE);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
-        g2.drawString((currentMapIndex + 1) + " / " + mapList.length, screenWidth / 2 - 30, screenHeight / 2 + 50);
-        g2.setColor(Color.RED);
-        g2.drawString("Use A/D to Choose | ENTER to Play | ESC to Return", screenWidth / 2 - 230, screenHeight - 80);
-    }
-
-    private void drawTutorial(Graphics2D g2) {
-        g2.setColor(new Color(30, 40, 40));
-        g2.fillRect(0, 0, screenWidth, screenHeight);
-        g2.setColor(Color.WHITE);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
-        g2.drawString("TUTORIAL", 50, 80);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
-        g2.setColor(Color.LIGHT_GRAY);
-        g2.drawString("- Press W, A, S, D to Move the Player.", 70, 160);
-        g2.drawString("- Press SPACE to Place a Bomb.", 70, 210);
-        g2.drawString("- Avoid Flame and Enemies to survive.", 70, 260);
-        g2.drawString("- press P to pause the game.", 70, 310);
-        drawBackButtonHint(g2);
-    }
-
-    private void drawAboutUs(Graphics2D g2) {
-        g2.setColor(new Color(40, 30, 40));
-        g2.fillRect(0, 0, screenWidth, screenHeight);
-        g2.setColor(Color.WHITE);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
-        g2.drawString("ABOUT US", 50, 80);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
-        g2.setColor(Color.LIGHT_GRAY);
-        g2.drawString("Course: Data Structures and Algorithms (CSD201)", 70, 160);
-        g2.drawString("Institution: FPT University", 70, 210);
-        g2.drawString("[CE200304 - Nguyễn Trần Khả Nhân - leader]", 70, 260);
-        g2.drawString("[CE201492 - Lương Trung Hiếu]", 70, 310);
-        g2.drawString("[CE201621 - Nguyễn Minh Phát]", 70, 360);
-        g2.drawString("[CE201183 -Đỗ Trần Thiên Phúc]", 70, 410);
-        g2.drawString("[CE201665 - Lê Nguyễn Thành Tài]", 70, 460);
-        g2.drawString("[CE201233 -Trương Anh Tuấn]", 70, 510);
-        drawBackButtonHint(g2);
-    }
-
-    private void drawLeaderboard(Graphics2D g2) {
-        g2.setColor(new Color(20, 30, 20));
-        g2.fillRect(0, 0, screenWidth, screenHeight);
-        g2.setColor(Color.blue);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.BOLD, 36));
-        g2.drawString("TOP LEADERS", 50, 80);
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.PLAIN, 20));
-        g2.setColor(Color.WHITE);
-
-        String[] lines = scoreBoard.getLeaderboard().split("\n");
-        int y = 130;
-        int count = 0;
-        for (String line : lines) {
-            if (line != null && !line.trim().isEmpty()) {
-                g2.drawString(line, 80, y);
-                y += 35;
-                count++;
-            }
-            if (count >= 10) {
-                break;
-            }
-        }
-        drawBackButtonHint(g2);
-    }
-
-    private void drawBackButtonHint(Graphics2D g2) {
-        g2.setFont(new java.awt.Font("Arial", java.awt.Font.ITALIC, 16));
-        g2.setColor(Color.ORANGE);
-        g2.drawString("<- Press ESC to Return Menu", 40, screenHeight - 50);
     }
 }

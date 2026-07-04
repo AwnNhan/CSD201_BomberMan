@@ -20,6 +20,7 @@ tuan,0
 tuan,0
 tuan,0
 tuan,0
+12,0
 Current,100
 guma,100
 Player,100
