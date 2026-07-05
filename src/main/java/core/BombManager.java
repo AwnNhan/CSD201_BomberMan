@@ -44,7 +44,8 @@ public class BombManager {
                 countTemp = countTemp.next;
             }
 
-            if (currentBombCount >= 3) {
+            // SỬA ĐỔI: Giảm số lượng bom tối đa của người chơi xuống còn 2
+            if (currentBombCount >= 2) {
                 keyH.spacePressed = false;
                 return; 
             }

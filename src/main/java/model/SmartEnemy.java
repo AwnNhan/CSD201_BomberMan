@@ -1,20 +1,12 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
 import algorithm.GridPoint;
 import algorithm.PathFinder;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.util.ArrayList;
 import java.util.List;
-
-/**
- *
- * @author ADMIN
- */
-
+import java.util.Random;
 
 public class SmartEnemy extends GameObject {
 
@@ -26,6 +18,10 @@ public class SmartEnemy extends GameObject {
 
     private GridPoint targetPos;
     private String direction = "DOWN";
+
+    // Thêm các biến để đi Random khi bị kẹt
+    private int currentDir = -1;
+    private Random random = new Random();
 
     public SmartEnemy(double startX, double startY, int customSpeed) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
@@ -45,8 +41,23 @@ public class SmartEnemy extends GameObject {
         if ((int) this.X % TILE_SIZE == 0 && (int) this.Y % TILE_SIZE == 0) {
             GridPoint myPos = new GridPoint((int) (this.Y / TILE_SIZE), (int) (this.X / TILE_SIZE));
             currentPath = pathFinder.bfsSearch(myPos, targetPos, currentMap);
+
+            // LOGIC CHỮA CHÁY: Nếu không có đường tới người chơi (bị kẹt tường)
+            if (currentPath == null || currentPath.isEmpty()) {
+                List<Integer> validDirs = getValidDirections();
+                if (!validDirs.isEmpty()) {
+                    if (currentDir == -1 || !validDirs.contains(currentDir) || random.nextInt(5) == 0) {
+                        currentDir = validDirs.get(random.nextInt(validDirs.size()));
+                    }
+                } else {
+                    currentDir = -1; // Kẹt cứng 4 bề
+                }
+            } else {
+                currentDir = -1; // Có đường thì tắt chế độ Random
+            }
         }
 
+        // 1. ƯU TIÊN ĐI RƯỢT THEO ĐƯỜNG BFS
         if (currentPath != null && !currentPath.isEmpty()) {
             GridPoint nextStep = currentPath.get(0);
 
@@ -81,8 +92,37 @@ public class SmartEnemy extends GameObject {
             this.setX(nextX);
             this.setY(nextY);
         }
+        // 2. NẾU KHÔNG CÓ ĐƯỜNG, ĐI RANDOM
+        else if (currentDir != -1) {
+            if (currentDir == 0) {
+                this.setY(this.Y - speed);
+                direction = "UP";
+            } else if (currentDir == 1) {
+                this.setY(this.Y + speed);
+                direction = "DOWN";
+            } else if (currentDir == 2) {
+                this.setX(this.X - speed);
+                direction = "LEFT";
+            } else if (currentDir == 3) {
+                this.setX(this.X + speed);
+                direction = "RIGHT";
+            }
+        }
 
         return true;
+    }
+
+    private List<Integer> getValidDirections() {
+        List<Integer> dirs = new ArrayList<>();
+        int col = (int) (this.X / TILE_SIZE);
+        int row = (int) (this.Y / TILE_SIZE);
+
+        if (row > 0 && currentMap[row - 1][col] == 0) dirs.add(0);
+        if (row < currentMap.length - 1 && currentMap[row + 1][col] == 0) dirs.add(1);
+        if (col > 0 && currentMap[row][col - 1] == 0) dirs.add(2);
+        if (col < currentMap[0].length - 1 && currentMap[row][col + 1] == 0) dirs.add(3);
+
+        return dirs;
     }
 
     public String getDirection() {

@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
 import core.CollisionChecker;
@@ -11,7 +7,6 @@ import java.awt.Graphics;
 import java.awt.Rectangle;
 
 /**
- *
  * @author Nguyen Minh Phat - CE201621
  */
 public class Player extends GameObject {
@@ -47,7 +42,9 @@ public class Player extends GameObject {
             direction = "DOWN";
             nextY += speed;
             movingY = true;
-        } else if (keyH.leftPressed) {
+        }
+
+        if (keyH.leftPressed) {
             direction = "LEFT";
             facingLeft = true;
             nextX -= speed;
@@ -62,19 +59,21 @@ public class Player extends GameObject {
         int margin = 6;
         int assistThreshold = 16;
 
+        // --- TRỤC X: Kiểm tra độc lập với tọa độ Y hiện tại (getY()) ---
         if (movingX) {
-            Rectangle hitboxX = new Rectangle((int) nextX + margin, (int) nextY + margin,
+            Rectangle hitboxX = new Rectangle((int) nextX + margin, (int) getY() + margin,
                     getWidth() - 2 * margin, getHeight() - 2 * margin);
 
             if (!cChecker.checkTile(hitboxX)) {
                 this.setX(nextX);
             } else {
+                // Cơ chế tự động lách khe dọc khi đi ngang vướng góc tường
                 double centerOfTileY = Math.round(getY() / TILE_SIZE) * TILE_SIZE;
                 double offset = Math.abs(getY() - centerOfTileY);
 
                 if (offset > 0 && offset <= assistThreshold) {
                     if (getY() < centerOfTileY) {
-                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) getY() + margin,
+                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) (getY() + speed) + margin,
                                 getWidth() - 2 * margin, getHeight() - 2 * margin);
                         if (!cChecker.checkTile(slideBox)) {
                             this.setY(getY() + Math.min(speed, centerOfTileY - getY()));
@@ -90,24 +89,28 @@ public class Player extends GameObject {
             }
         }
 
+        // --- TRỤC Y: Kiểm tra độc lập với tọa độ X hiện tại (getX()) ---
         if (movingY) {
-            Rectangle hitboxY = new Rectangle((int) getX() + margin, (int) nextY + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+            Rectangle hitboxY = new Rectangle((int) getX() + margin, (int) nextY + margin,
+                    getWidth() - 2 * margin, getHeight() - 2 * margin);
 
             if (!cChecker.checkTile(hitboxY)) {
-                this.setY(nextY); // Dọc trống -> Đi dọc bình thường
+                this.setY(nextY);
             } else {
+                // Cơ chế tự động lách khe ngang khi đi dọc vướng góc tường
                 double centerOfTileX = Math.round(getX() / TILE_SIZE) * TILE_SIZE;
                 double offset = Math.abs(getX() - centerOfTileX);
 
-                // Nếu lệch trong ngưỡng cho phép -> Tự động trượt trái/phải để lọt khe
                 if (offset > 0 && offset <= assistThreshold) {
                     if (getX() < centerOfTileX) {
-                        Rectangle slideBox = new Rectangle((int) (getX() + speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        Rectangle slideBox = new Rectangle((int) (getX() + speed) + margin, (int) getY() + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
                         if (!cChecker.checkTile(slideBox)) {
                             this.setX(getX() + Math.min(speed, centerOfTileX - getX()));
                         }
                     } else if (getX() > centerOfTileX) {
-                        Rectangle slideBox = new Rectangle((int) (getX() - speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        Rectangle slideBox = new Rectangle((int) (getX() - speed) + margin, (int) getY() + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
                         if (!cChecker.checkTile(slideBox)) {
                             this.setX(getX() - Math.min(speed, getX() - centerOfTileX));
                         }
@@ -115,6 +118,11 @@ public class Player extends GameObject {
                 }
             }
         }
+
+        // Đồng bộ lại hitbox chính xác của lớp cha GameObject để phục vụ quét sát thương thực thể
+        this.hitbox.x = (int) this.X;
+        this.hitbox.y = (int) this.Y;
+
         return true;
     }
 
