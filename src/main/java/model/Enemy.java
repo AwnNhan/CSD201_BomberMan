@@ -7,20 +7,36 @@ import java.util.List;
 import java.util.Random;
 
 public class Enemy extends GameObject {
-    
-    private int speed = 2; // Tốc độ di chuyển (Nên để số nguyên chẵn như 2 để khớp Grid 48)
-    private int currentDir = -1; // Hướng hiện tại: 0=Lên, 1=Xuống, 2=Trái, 3=Phải
-    
-    private static final int TILE_SIZE = 48; 
-    private int[][] currentMap;
-    private Random random = new Random();
 
+    protected int speed = 2; // Tốc độ di chuyển
+    protected int currentDir = -1; // Hướng hiện tại: 0=Lên, 1=Xuống, 2=Trái, 3=Phải
+    protected String direction = "DOWN";
+    protected static final int TILE_SIZE = 48;
+    protected int[][] currentMap;
+    protected Random random = new Random();
+    
+    // Tọa độ mục tiêu (Player) để dành cho AI nâng cao
+    protected int targetR = -1; 
+    protected int targetC = -1; 
+
+    // Constructor 1: Mặc định (2 tham số)
     public Enemy(double startX, double startY) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
     }
 
+    // Constructor 2: Có chỉnh tốc độ (3 tham số) -> GIẢI QUYẾT LỖI CHẤM ĐỎ Ở GAMEPANEL
+    public Enemy(double startX, double startY, int customSpeed) {
+        super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
+        this.speed = customSpeed;
+    }
+
     public void setRealData(int[][] map) {
         this.currentMap = map;
+    }
+
+    public void setTarget(int r, int c) {
+        this.targetR = r;
+        this.targetC = c;
     }
 
     @Override
@@ -41,10 +57,22 @@ public class Enemy extends GameObject {
         }
 
         // Cứ thế tiếp tục bước đi theo hướng đã chọn
-        if (currentDir == 0) this.setY(this.Y - speed); // Lên
-        else if (currentDir == 1) this.setY(this.Y + speed); // Xuống
-        else if (currentDir == 2) this.setX(this.X - speed); // Trái
-        else if (currentDir == 3) this.setX(this.X + speed); // Phải
+        if (currentDir == 0) {
+            this.setY(this.Y - speed); // Lên
+            direction = "UP";
+        }
+        else if (currentDir == 1) {
+            this.setY(this.Y + speed); // Xuống
+            direction = "DOWN";
+        }
+        else if (currentDir == 2) {
+            this.setX(this.X - speed); // Trái
+            direction = "LEFT";
+        }
+        else if (currentDir == 3) {
+            this.setX(this.X + speed); // Phải
+            direction = "RIGHT";
+        }
 
         return true; 
     }
@@ -65,8 +93,13 @@ public class Enemy extends GameObject {
 
     @Override
     public boolean render(Graphics g) {
+        // Hàm này sẽ được GamePanel ghi đè bằng hình ảnh, để tạm màu đỏ phòng hờ
         g.setColor(Color.RED);
         g.fillRect((int)getX(), (int)getY(), getWidth(), getHeight());
         return true; 
+    }
+
+    public String getDirection() {
+        return direction;
     }
 }

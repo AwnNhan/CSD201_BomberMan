@@ -1,60 +1,117 @@
+/*
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
+ * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
+ */
 package model;
 
+import core.CollisionChecker;
 import core.KeyHandler;
+import java.awt.Color;
 import java.awt.Graphics;
 import java.awt.Rectangle;
-import java.awt.image.BufferedImage;
-import java.util.ArrayList;
 
+/**
+ *
+ * @author Nguyen Minh Phat - CE201621
+ */
 public class Player extends GameObject {
 
+    private String direction = "DOWN";
+    private boolean facingLeft = false;
     private KeyHandler keyH;
+    private CollisionChecker cChecker;
     private double speed;
-    private BufferedImage sprite; // Chứa hình ảnh nhân vật
+
     private static final int TILE_SIZE = 48;
 
-    // Dữ liệu bản đồ và bom để xét va chạm
-    private int[][] currentMap;
-    private ArrayList<Bomb> bombList;
-
-    public Player(double startX, double startY, KeyHandler keyH, BufferedImage sprite) {
+    public Player(double startX, double startY, KeyHandler keyH, CollisionChecker cChecker) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.PLAYER);
         this.keyH = keyH;
-        this.sprite = sprite;
+        this.cChecker = cChecker;
         this.speed = 4.0;
     }
 
-    // Nhận dữ liệu từ GamePanel truyền sang
-    public void setRealData(int[][] map, ArrayList<Bomb> bombs) {
-        this.currentMap = map;
-        this.bombList = bombs;
-    }
+    @Override
+    public boolean update() {
+        double nextX = getX();
+        double nextY = getY();
 
-    // Di dời thuật toán lách tường và xuyên bom từ GamePanel vào đây
-    private boolean canMove(int nextX, int nextY) {
-        if (currentMap == null || bombList == null) return false;
+        boolean movingX = false;
+        boolean movingY = false;
 
-        int margin = 12; 
-        int leftCol = (nextX + margin) / TILE_SIZE;
-        int rightCol = (nextX + TILE_SIZE - margin - 1) / TILE_SIZE;
-        int topRow = (nextY + margin) / TILE_SIZE;
-        int bottomRow = (nextY + TILE_SIZE - margin - 1) / TILE_SIZE;
-
-        if (leftCol < 0 || rightCol >= 15 || topRow < 0 || bottomRow >= 13) return false;
-
-        if (currentMap[topRow][leftCol] != 0 || currentMap[topRow][rightCol] != 0 || 
-            currentMap[bottomRow][leftCol] != 0 || currentMap[bottomRow][rightCol] != 0) {
-            return false;
+        if (keyH.upPressed) {
+            direction = "UP";
+            nextY -= speed;
+            movingY = true;
+        } else if (keyH.downPressed) {
+            direction = "DOWN";
+            nextY += speed;
+            movingY = true;
+        } else if (keyH.leftPressed) {
+            direction = "LEFT";
+            facingLeft = true;
+            nextX -= speed;
+            movingX = true;
+        } else if (keyH.rightPressed) {
+            direction = "RIGHT";
+            facingLeft = false;
+            nextX += speed;
+            movingX = true;
         }
 
-        Rectangle nextHitbox = new Rectangle(nextX + margin, nextY + margin, TILE_SIZE - 2 * margin, TILE_SIZE - 2 * margin);
-        Rectangle currentHitbox = new Rectangle((int)this.X + margin, (int)this.Y + margin, TILE_SIZE - 2 * margin, TILE_SIZE - 2 * margin);
+        int margin = 6;
+        int assistThreshold = 16;
 
-        for (Bomb b : bombList) {
-            Rectangle bombHitbox = new Rectangle((int)b.getX() * TILE_SIZE, (int)b.getY() * TILE_SIZE, TILE_SIZE, TILE_SIZE);
-            if (nextHitbox.intersects(bombHitbox)) {
-                if (!currentHitbox.intersects(bombHitbox)) {
-                    return false; 
+        if (movingX) {
+            Rectangle hitboxX = new Rectangle((int) nextX + margin, (int) nextY + margin,
+                    getWidth() - 2 * margin, getHeight() - 2 * margin);
+
+            if (!cChecker.checkTile(hitboxX)) {
+                this.setX(nextX);
+            } else {
+                double centerOfTileY = Math.round(getY() / TILE_SIZE) * TILE_SIZE;
+                double offset = Math.abs(getY() - centerOfTileY);
+
+                if (offset > 0 && offset <= assistThreshold) {
+                    if (getY() < centerOfTileY) {
+                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) getY() + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setY(getY() + Math.min(speed, centerOfTileY - getY()));
+                        }
+                    } else if (getY() > centerOfTileY) {
+                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) (getY() - speed) + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setY(getY() - Math.min(speed, getY() - centerOfTileY));
+                        }
+                    }
+                }
+            }
+        }
+
+        if (movingY) {
+            Rectangle hitboxY = new Rectangle((int) getX() + margin, (int) nextY + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+
+            if (!cChecker.checkTile(hitboxY)) {
+                this.setY(nextY); // Dọc trống -> Đi dọc bình thường
+            } else {
+                double centerOfTileX = Math.round(getX() / TILE_SIZE) * TILE_SIZE;
+                double offset = Math.abs(getX() - centerOfTileX);
+
+                // Nếu lệch trong ngưỡng cho phép -> Tự động trượt trái/phải để lọt khe
+                if (offset > 0 && offset <= assistThreshold) {
+                    if (getX() < centerOfTileX) {
+                        Rectangle slideBox = new Rectangle((int) (getX() + speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setX(getX() + Math.min(speed, centerOfTileX - getX()));
+                        }
+                    } else if (getX() > centerOfTileX) {
+                        Rectangle slideBox = new Rectangle((int) (getX() - speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        if (!cChecker.checkTile(slideBox)) {
+                            this.setX(getX() - Math.min(speed, getX() - centerOfTileX));
+                        }
+                    }
                 }
             }
         }
@@ -62,45 +119,21 @@ public class Player extends GameObject {
     }
 
     @Override
-    public boolean update() {
-        int nextPlayerX = (int)this.X;
-        int nextPlayerY = (int)this.Y;
+    public boolean render(Graphics g) {
+        g.setColor(Color.WHITE);
+        g.fillRect((int) getX(), (int) getY(), getWidth(), getHeight());
 
-        // Thuật toán Auto-align (Trượt góc)
-        if (keyH.upPressed) {
-            nextPlayerY -= speed;
-            int targetX = (((int)this.X + TILE_SIZE / 2) / TILE_SIZE) * TILE_SIZE;
-            if (this.X < targetX) nextPlayerX += Math.min(speed, targetX - this.X);
-            else if (this.X > targetX) nextPlayerX -= Math.min(speed, this.X - targetX);
-        } 
-        else if (keyH.downPressed) {
-            nextPlayerY += speed;
-            int targetX = (((int)this.X + TILE_SIZE / 2) / TILE_SIZE) * TILE_SIZE;
-            if (this.X < targetX) nextPlayerX += Math.min(speed, targetX - this.X);
-            else if (this.X > targetX) nextPlayerX -= Math.min(speed, this.X - targetX);
-        } 
-        else if (keyH.leftPressed) {
-            nextPlayerX -= speed;
-            int targetY = (((int)this.Y + TILE_SIZE / 2) / TILE_SIZE) * TILE_SIZE;
-            if (this.Y < targetY) nextPlayerY += Math.min(speed, targetY - this.Y);
-            else if (this.Y > targetY) nextPlayerY -= Math.min(speed, this.Y - targetY);
-        } 
-        else if (keyH.rightPressed) {
-            nextPlayerX += speed;
-            int targetY = (((int)this.Y + TILE_SIZE / 2) / TILE_SIZE) * TILE_SIZE;
-            if (this.Y < targetY) nextPlayerY += Math.min(speed, targetY - this.Y);
-            else if (this.Y > targetY) nextPlayerY -= Math.min(speed, this.Y - targetY);
-        }
-
-        if (canMove(nextPlayerX, (int)this.Y)) this.setX(nextPlayerX);
-        if (canMove((int)this.X, nextPlayerY)) this.setY(nextPlayerY);
+        g.setColor(Color.GREEN);
+        g.drawRect(getHitbox().x, getHitbox().y, getHitbox().width, getHitbox().height);
 
         return true;
     }
 
-    @Override
-    public boolean render(Graphics g) {
-        g.drawImage(sprite, (int)getX(), (int)getY(), getWidth(), getHeight(), null);
-        return true;
+    public String getDirection() {
+        return direction;
+    }
+
+    public boolean isFacingLeft() {
+        return facingLeft;
     }
 }
