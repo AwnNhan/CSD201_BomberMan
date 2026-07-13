@@ -65,7 +65,8 @@ public class GamePanel extends JPanel implements Runnable {
         this.addKeyListener(keyH);
 
         mapM = new MapManager();
-        cChecker = new CollisionChecker(mapM);
+
+        cChecker = new CollisionChecker(this);
         graphConverter.updateGraph(mapM.getMapMatrix());
 
         objectList = new CustomLinkedList();
@@ -117,7 +118,8 @@ public class GamePanel extends JPanel implements Runnable {
         // 2. NẠP FILE MAP TƯƠNG ỨNG VỚI LEVEL ĐÓ
         mapM.loadMap(currentConfig.getMapFilePath());
 
-        cChecker = new CollisionChecker(mapM);
+     
+        cChecker = new CollisionChecker(this);
         graphConverter.updateGraph(mapM.getMapMatrix());
 
         // Reset hệ thống danh sách vật thể và bom
@@ -338,7 +340,7 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
-     @Override
+    @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
@@ -358,7 +360,7 @@ public class GamePanel extends JPanel implements Runnable {
             mapM.render(g2);
             if (gameState == GameState.PLAYING || gameState == GameState.PAUSE || isGameOver || isVictory) {
                 renderGameObjects(g2);
-                
+
                 // 2. Vẽ HUD (Điểm, Mạng sống) qua UIManager
                 uiManager.drawHUD(g2, playerLives, score, screenWidth);
             }
