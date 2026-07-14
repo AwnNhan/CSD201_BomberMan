@@ -34,6 +34,7 @@ public class Player extends GameObject {
         boolean movingX = false;
         boolean movingY = false;
 
+        // --- ĐỌC DỮ LIỆU ĐIỀU KHIỂN TỪ BÀN PHÍM ---
         if (keyH.upPressed) {
             direction = "UP";
             nextY -= speed;
@@ -56,30 +57,26 @@ public class Player extends GameObject {
             movingX = true;
         }
 
-        int margin = 6;
-        int assistThreshold = 16;
-
-        // --- TRỤC X: Kiểm tra độc lập với tọa độ Y hiện tại (getY()) ---
+        // Cấu hình viền hitbox thu nhỏ để di chuyển mượt hơn
         int margin = 10;
         int assistThreshold = 18;
 
-        // 🌟 BƯỚC QUAN TRỌNG: Tạo Hitbox HIỆN TẠI đã được thu nhỏ margin để biết khi nào thực sự thoát khỏi bom
+        // Tạo Hitbox HIỆN TẠI phục vụ việc kiểm tra trạng thái thoát khỏi quả bom vừa đặt
         Rectangle currentHitbox = new Rectangle((int) getX() + margin, (int) getY() + margin,
                 getWidth() - 2 * margin, getHeight() - 2 * margin);
 
-        // --- TRỤC X ---
+        // =====================================================================
+        // XỬ LÝ DI CHUYỂN TRÊN TRỤC X
+        // =====================================================================
         if (movingX) {
             Rectangle hitboxX = new Rectangle((int) nextX + margin, (int) getY() + margin,
                     getWidth() - 2 * margin, getHeight() - 2 * margin);
 
-            if (!cChecker.checkTile(hitboxX)) {
-                this.setX(nextX);
-            } else {
-                // Cơ chế tự động lách khe dọc khi đi ngang vướng góc tường
-            // Cập nhật gọi checkBomb với currentHitbox
+            // Nếu ô tiếp theo không phải tường VÀ không bị vướng Bom -> Cho phép bước đi
             if (!cChecker.checkTile(hitboxX) && !cChecker.checkBomb(currentHitbox, hitboxX)) {
                 this.setX(nextX);
             } else {
+                // Hỗ trợ cơ chế tự động lách khe dọc khi đi ngang bị vướng góc tường/bom
                 double centerOfTileY = Math.round(getY() / TILE_SIZE) * TILE_SIZE;
                 double offset = Math.abs(getY() - centerOfTileY);
 
@@ -87,14 +84,14 @@ public class Player extends GameObject {
                     if (getY() < centerOfTileY) {
                         Rectangle slideBox = new Rectangle((int) getX() + margin, (int) (getY() + speed) + margin,
                                 getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        
                         if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setY(getY() + Math.min(speed, centerOfTileY - getY()));
                         }
                     } else if (getY() > centerOfTileY) {
                         Rectangle slideBox = new Rectangle((int) getX() + margin, (int) (getY() - speed) + margin,
                                 getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        
                         if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setY(getY() - Math.min(speed, getY() - centerOfTileY));
                         }
@@ -103,20 +100,18 @@ public class Player extends GameObject {
             }
         }
 
-        // --- TRỤC Y: Kiểm tra độc lập với tọa độ X hiện tại (getX()) ---
-        // --- TRỤC Y ---
+        // =====================================================================
+        // XỬ LÝ DI CHUYỂN TRÊN TRỤC Y
+        // =====================================================================
         if (movingY) {
             Rectangle hitboxY = new Rectangle((int) getX() + margin, (int) nextY + margin,
                     getWidth() - 2 * margin, getHeight() - 2 * margin);
 
-            if (!cChecker.checkTile(hitboxY)) {
-                this.setY(nextY);
-            } else {
-                // Cơ chế tự động lách khe ngang khi đi dọc vướng góc tường
-            // Cập nhật gọi checkBomb với currentHitbox
+            // Nếu ô tiếp theo không phải tường VÀ không bị vướng Bom -> Cho phép bước đi
             if (!cChecker.checkTile(hitboxY) && !cChecker.checkBomb(currentHitbox, hitboxY)) {
                 this.setY(nextY);
             } else {
+                // Hỗ trợ cơ chế tự động lách khe ngang khi đi dọc bị vướng góc tường/bom
                 double centerOfTileX = Math.round(getX() / TILE_SIZE) * TILE_SIZE;
                 double offset = Math.abs(getX() - centerOfTileX);
 
@@ -124,14 +119,14 @@ public class Player extends GameObject {
                     if (getX() < centerOfTileX) {
                         Rectangle slideBox = new Rectangle((int) (getX() + speed) + margin, (int) getY() + margin,
                                 getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        
                         if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setX(getX() + Math.min(speed, centerOfTileX - getX()));
                         }
                     } else if (getX() > centerOfTileX) {
                         Rectangle slideBox = new Rectangle((int) (getX() - speed) + margin, (int) getY() + margin,
                                 getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        
                         if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setX(getX() - Math.min(speed, getX() - centerOfTileX));
                         }
@@ -140,7 +135,7 @@ public class Player extends GameObject {
             }
         }
 
-        // Đồng bộ lại hitbox chính xác của lớp cha GameObject để phục vụ quét sát thương thực thể
+        // Đồng bộ lại vị trí hitbox chính xác của lớp cha GameObject để quét sát thương
         this.hitbox.x = (int) this.X;
         this.hitbox.y = (int) this.Y;
 
@@ -149,15 +144,8 @@ public class Player extends GameObject {
 
     @Override
     public boolean render(Graphics g) {
+        // Vẽ được xử lý gián tiếp bằng Sprite qua AssetManager trong GamePanel
         return true;
-    }
-
-    public String getDirection() {
-        return direction;
-    }
-
-    public boolean isFacingLeft() {
-        return facingLeft;
     }
 
     public String getDirection() {
