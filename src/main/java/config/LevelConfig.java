@@ -18,6 +18,8 @@ public class LevelConfig {
     private int doorRow;
 
     public LevelConfig(int levelNumber, String mapFilePath, int enemyCount, int enemySpeed, int doorCol, int doorRow) {
+
+    public LevelConfig(int levelNumber, String mapFilePath, int enemyCount, int enemySpeed) {
         this.levelNumber = levelNumber;
         this.mapFilePath = mapFilePath;
         this.enemyCount = enemyCount;

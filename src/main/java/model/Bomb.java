@@ -48,4 +48,6 @@ public class Bomb extends GameObject {
         g.fillOval((int) X + 4, (int) Y + 4, width - 8, height - 8);
         return true;
     }
+    
+    
 }

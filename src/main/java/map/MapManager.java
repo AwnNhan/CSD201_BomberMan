@@ -15,6 +15,8 @@ public class MapManager {
 
     public MapManager() {
         mapMatrix = new int[maxRow][maxCol];
+
+      //  loadMap("/maps/map01.txt");
     }
 
     public void loadMap(String filePath) {
