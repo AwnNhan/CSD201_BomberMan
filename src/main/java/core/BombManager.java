@@ -10,6 +10,15 @@ import model.Player;
 public class BombManager {
 
     private final GamePanel gp;
+    public final MinHeapQueue bombQueue; // Public để Boss xài
+    private long lastBombTime = 0;
+    private final long bombCooldown = 500; 
+
+    public BombManager(core.GamePanel gp) {
+        this.gp = gp;
+        this.bombQueue = new MinHeapQueue();
+    }
+
     private final MinHeapQueue bombQueue;
     private long lastBombTime = 0;
     private final long bombCooldown = 500; // Thời gian giãn cách giữa 2 lần đặt bom (ms)
@@ -34,6 +43,15 @@ public class BombManager {
 
         if (keyH.spacePressed && (currentTimeMs - lastBombTime >= bombCooldown)) {
             
+            int currentBombCount = 0;
+            CustomLinkedList.Node countTemp = gp.objectList.head;
+            while (countTemp != null) {
+                // Chỉ đếm bom của Player (bỏ qua bom Boss)
+                if (countTemp.data.getId() == IdObject.BOMB) {
+                    Bomb checkBomb = (Bomb) countTemp.data;
+                    if (!checkBomb.isBossBomb()) {
+                        currentBombCount++;
+                    }
             // --- BƯỚC THÊM MỚI: ĐẾM SỐ BOM HIỆN CÓ TRÊN BẢN ĐỒ ---
             int currentBombCount = 0;
             CustomLinkedList.Node countTemp = gp.objectList.head;
@@ -44,6 +62,11 @@ public class BombManager {
                 countTemp = countTemp.next;
             }
 
+            // SỬA ĐỔI: Giảm số lượng bom tối đa của người chơi xuống còn 2
+            if (currentBombCount >= 2) {
+                keyH.spacePressed = false;
+                return; 
+            }
             // Nếu đã có đủ hoặc vượt quá 3 trái bom thì hủy lệnh đặt bom, không cho đặt thêm
             if (currentBombCount >= 3) {
                 keyH.spacePressed = false;
@@ -65,6 +88,7 @@ public class BombManager {
             }
 
             if (!hasBombHere) {
+                Bomb b = new Bomb(bombX, bombY, gp.tileSize, gp.tileSize, IdObject.BOMB, currentTimeMs + 3000, false);
                 Bomb b = new Bomb(bombX, bombY, gp.tileSize, gp.tileSize, IdObject.BOMB, currentTimeMs + 3000);
                 bombQueue.enqueue(b);
                 gp.objectList.addLast(b);
@@ -94,6 +118,59 @@ public class BombManager {
         }
     }
 
+    private void executeExplosion(Bomb bomb) {
+        int bx = (int) bomb.getX();
+        int by = (int) bomb.getY();
+        boolean isBossFlame = bomb.isBossBomb(); 
+        
+        gp.objectList.addLast(new Flame(bx, by, gp.tileSize, gp.tileSize, IdObject.FLAME, "CENTER", isBossFlame));
+
+        int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}; 
+        int[][] map = gp.mapM.getMapMatrix();
+        
+        // SỬA LỖI MAP: Lấy max Row và Col từ MapManager (13x25)
+        int maxR = gp.mapM.getMaxRow();
+        int maxC = gp.mapM.getMaxCol();
+
+        for (int[] dir : dirs) {
+            String flameType = (dir[0] != 0) ? "VERTICAL" : "HORIZONTAL";
+
+            for (int i = 1; i <= 2; i++) {
+                int nextCol = bx / gp.tileSize + dir[1] * i;
+                int nextRow = by / gp.tileSize + dir[0] * i;
+
+                // Áp dụng giới hạn map 25 cột
+                if (nextCol < 0 || nextCol >= maxC || nextRow < 0 || nextRow >= maxR) {
+                    break; 
+                }
+
+                int tileType = map[nextRow][nextCol];
+                if (tileType == 1) {
+                    break; 
+                }
+
+                String currentType = (i == 2 || tileType == 2) ? "END" : flameType;
+
+                if (tileType == 2) { 
+                    gp.objectList.addLast(new Flame(nextCol * gp.tileSize, nextRow * gp.tileSize, gp.tileSize, gp.tileSize, IdObject.FLAME, "END", isBossFlame));
+                    gp.mapM.destroySoftWall(nextRow, nextCol);
+                    break; 
+                }
+                
+                gp.objectList.addLast(new Flame(nextCol * gp.tileSize, nextRow * gp.tileSize, gp.tileSize, gp.tileSize, IdObject.FLAME, currentType, isBossFlame));
+            }
+        }
+    }
+
+    public int[][] generateMapWithBombs() {
+        int maxR = gp.mapM.getMaxRow();
+        int maxC = gp.mapM.getMaxCol();
+        
+        int[][] mapWithBombs = new int[maxR][maxC];
+        int[][] originalMap = gp.mapM.getMapMatrix();
+        
+        for (int r = 0; r < maxR; r++) {
+            System.arraycopy(originalMap[r], 0, mapWithBombs[r], 0, maxC);
     // Logic lan tỏa ngọn lửa khi nổ
     private void executeExplosion(Bomb bomb) {
     int bx = (int) bomb.getX();
@@ -148,6 +225,7 @@ public class BombManager {
         CustomLinkedList.Node t = gp.objectList.head;
         while (t != null) {
             if (t.data.getId() == IdObject.BOMB) {
+                mapWithBombs[(int) t.data.getY() / gp.tileSize][(int) t.data.getX() / gp.tileSize] = 1;
                 mapWithBombs[(int) t.data.getY() / gp.tileSize][(int) t.data.getX() / gp.tileSize] = 1; // Coi ô có bom là tường
             }
             t = t.next;

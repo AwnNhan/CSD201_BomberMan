@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package map;
 
 import java.awt.Color;
@@ -14,7 +10,7 @@ public class MapManager {
 
     private int[][] mapMatrix;
     private final int maxRow = 13;
-    private final int maxCol = 15;
+    private final int maxCol = 25; 
     private final int tileSize = 48;
 
     public MapManager() {
@@ -27,41 +23,31 @@ public class MapManager {
         try {
             InputStream is = getClass().getResourceAsStream(filePath);
 
-            // Bắt lỗi: Nếu sai đường dẫn, Java sẽ trả về null
             if (is == null) {
-                System.out.println("Not found contextpath: " + filePath);
+                System.out.println("❌ LỖI NGHIÊM TRỌNG: Không tìm thấy file map -> " + filePath);
                 return;
             }
 
             BufferedReader br = new BufferedReader(new InputStreamReader(is));
 
-            int col = 0;
-            int row = 0;
-
-            while (col < maxCol && row < maxRow) {
+            // Đọc dữ liệu ma trận 13x25
+            for (int row = 0; row < maxRow; row++) {
                 String line = br.readLine();
-                if (line == null) {
-                    break;
-                }
+                if (line == null) break; 
 
-                // Fix lỗi khoảng trắng: Xóa khoảng trắng thừa 2 đầu và cắt theo 1 hoặc nhiều dấu cách
-                String numbers[] = line.trim().split("\\s+");
+                String[] numbers = line.trim().split("\\s+");
 
-                while (col < maxCol && col < numbers.length) {
+                for (int col = 0; col < maxCol && col < numbers.length; col++) {
                     mapMatrix[row][col] = Integer.parseInt(numbers[col]);
-                    col++;
-                }
-                if (col == maxCol) {
-                    col = 0;
-                    row++;
                 }
             }
+            
             br.close();
-            System.out.println("✅ ĐÃ NẠP MAP THÀNH CÔNG VÀO MA TRẬN!");
+            System.out.println("✅ ĐÃ NẠP MAP THÀNH CÔNG: " + filePath);
 
         } catch (Exception e) {
             System.out.println("❌ Lỗi trong quá trình đọc map: " + e.getMessage());
-            e.printStackTrace(); // In chi tiết dòng bị lỗi ra console
+            e.printStackTrace(); 
         }
     }
 
@@ -70,40 +56,44 @@ public class MapManager {
     }
 
     public void destroySoftWall(int row, int col) {
-        if (mapMatrix[row][col] == 2) {
-            mapMatrix[row][col] = 0;
+        if (row >= 0 && row < maxRow && col >= 0 && col < maxCol) {
+            if (mapMatrix[row][col] == 2) {
+                mapMatrix[row][col] = 0;
+            }
         }
     }
 
     public void render(Graphics2D g2) {
-        int col = 0;
-        int row = 0;
         int x = 0;
         int y = 0;
 
-        while (col < maxCol && row < maxRow) {
-            int tileNum = mapMatrix[row][col];
+        for (int row = 0; row < maxRow; row++) {
+            for (int col = 0; col < maxCol; col++) {
+                int tileNum = mapMatrix[row][col];
 
-            if (tileNum == 1) {
-                g2.setColor(Color.DARK_GRAY);
-                g2.fillRect(x, y, tileSize, tileSize);
-            } else if (tileNum == 2) {
-                g2.setColor(new Color(139, 69, 19));
-                g2.fillRect(x, y, tileSize, tileSize);
+                if (tileNum == 1) {
+                    g2.setColor(Color.DARK_GRAY);
+                    g2.fillRect(x, y, tileSize, tileSize);
+                } else if (tileNum == 2) {
+                    g2.setColor(new Color(139, 69, 19));
+                    g2.fillRect(x, y, tileSize, tileSize);
+                }
+
+                g2.setColor(Color.BLACK);
+                g2.drawRect(x, y, tileSize, tileSize);
+
+                x += tileSize;
             }
-
-            g2.setColor(Color.BLACK);
-            g2.drawRect(x, y, tileSize, tileSize);
-
-            col++;
-            x += tileSize;
-
-            if (col == maxCol) {
-                col = 0;
-                x = 0;
-                row++;
-                y += tileSize;
-            }
+            x = 0;
+            y += tileSize;
         }
+    }
+
+    public int getMaxRow() {
+        return maxRow;
+    }
+
+    public int getMaxCol() {
+        return maxCol;
     }
 }
