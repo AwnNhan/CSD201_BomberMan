@@ -15,7 +15,7 @@ import java.awt.geom.Path2D;
  */
 public class Flame extends GameObject {
     private final long createTime;       // Lưu lại thời điểm ngọn lửa vừa bùng lên
-    private final long duration = 500;   // Ngọn lửa sẽ cháy trong 500ms (Nửa giây)
+    private final long duration = 400;   // Ngọn lửa sẽ cháy trong 400ms (Nửa giây)
     private String type;                 // Lưu loại tia lửa (CENTER, HORIZONTAL, VERTICAL, END)
     private boolean isBossFlame;         // CỜ ĐÁNH DẤU: Lửa của Boss hay của Player
 
