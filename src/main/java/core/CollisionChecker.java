@@ -1,50 +1,33 @@
 package core;
 
-import java.awt.Rectangle;
-import map.MapManager;
-
-public class CollisionChecker {
-
-    private MapManager mapM;
-    private final int tileSize = 48;
-
-    // Truyền MapManager vào để đọc ma trận bản đồ
-    public CollisionChecker(MapManager mapM) {
-        this.mapM = mapM;
-    }
-
-    public boolean checkTile(Rectangle hitbox) {
-        if (mapM == null) {
-            return false;
-        }
 import algorithm.CustomLinkedList;
+import java.awt.Rectangle;
 import model.GameObject;
 import model.IdObject;
 
 public class CollisionChecker {
 
-    private GamePanel gp;
+    private final GamePanel gp;
     private final int tileSize = 48;
 
-    // Nhận vào GamePanel để truy cập động mapM và objectList mọi lúc
+    // Nhận vào GamePanel để truy cập động cả mapM và danh sách vật thể objectList mọi lúc
     public CollisionChecker(GamePanel gp) {
         this.gp = gp;
     }
 
+    // =====================================================================
+    // KIỂM TRA VA CHẠM VỚI TƯỜNG/GẠCH TRÊN MA TRẬN BẢN ĐỒ LINH HOẠT
+    // =====================================================================
     public boolean checkTile(Rectangle hitbox) {
         if (gp == null || gp.mapM == null) {
             return false;
         }
 
-        // Giới hạn biên cứng của ma trận 15 cột x 13 hàng
-        int maxMapWidth = 15 * tileSize;
-        int maxMapHeight = 13 * tileSize;
+        // Tính toán độ rộng/cao thực tế của toàn bộ bản đồ dựa theo dữ liệu Ma trận (ví dụ 13x25)
+        int maxMapWidth = gp.mapM.getMaxCol() * tileSize;
+        int maxMapHeight = gp.mapM.getMaxRow() * tileSize;
 
-        // Tính toán độ rộng/cao thực tế của toàn bộ bản đồ dựa theo dữ liệu Ma trận (13x25)
-        int maxMapWidth = mapM.getMaxCol() * tileSize;
-        int maxMapHeight = mapM.getMaxRow() * tileSize;
-
-        // 1. Kiểm tra giới hạn biên của TOÀN BỘ BẢN ĐỒ thay vì biên màn hình
+        // 1. Kiểm tra giới hạn biên cứng của TOÀN BỘ BẢN ĐỒ thay vì chỉ biên màn hình hiển thị
         if (hitbox.x < 0 || hitbox.y < 0) {
             return true;
         }
@@ -52,18 +35,17 @@ public class CollisionChecker {
             return true;
         }
 
-        // 2. Kiểm tra gạch/tường từ ma trận khổ lớn của Người số 3
+        // 2. Tính toán các ô lưới (ô cột/hàng) mà hitbox thực thể đang đè lên
         int leftCol = hitbox.x / tileSize;
         int rightCol = (hitbox.x + hitbox.width - 1) / tileSize;
         int topRow = hitbox.y / tileSize;
         int bottomRow = (hitbox.y + hitbox.height - 1) / tileSize;
 
-        // Cập nhật điều kiện mảng theo độ dài thực tế của MapManager (không fix cứng số 15 nữa)
-        if (leftCol >= 0 && rightCol < mapM.getMaxCol() && topRow >= 0 && bottomRow < mapM.getMaxRow()) {
-            int[][] map = mapM.getMapMatrix();
-        if (leftCol >= 0 && rightCol < 15 && topRow >= 0 && bottomRow < 13) {
+        // Kiểm tra an toàn biên mảng ma trận tránh lỗi OutOfBounds
+        if (leftCol >= 0 && rightCol < gp.mapM.getMaxCol() && topRow >= 0 && bottomRow < gp.mapM.getMaxRow()) {
             int[][] map = gp.mapM.getMapMatrix();
-            // 1: Tường cứng, 2: Gạch mềm
+            
+            // Nếu bất kỳ ô nào thực thể chạm vào là Tường cứng (1) hoặc Gạch mềm (2) -> Báo có va chạm (true)
             if (map[topRow][leftCol] != 0 || map[topRow][rightCol] != 0
                     || map[bottomRow][leftCol] != 0 || map[bottomRow][rightCol] != 0) {
                 return true;
@@ -72,7 +54,9 @@ public class CollisionChecker {
         return false;
     }
 
-    // Thay đổi tham số truyền vào từ (GameObject entity) thành (Rectangle currentHitbox)
+    // =====================================================================
+    // KIỂM TRA VA CHẠM THÔNG MINH VỚI BOM (GIÚP PLAYER ĐẶT BOM XONG THOÁT RA ĐƯỢC)
+    // =====================================================================
     public boolean checkBomb(Rectangle currentHitbox, Rectangle nextHitbox) {
         if (gp == null || gp.objectList == null) {
             return false;
@@ -83,7 +67,12 @@ public class CollisionChecker {
             if (current.data.getId() == IdObject.BOMB) {
                 Rectangle bombHitbox = current.data.getHitbox();
 
-                // Dùng currentHitbox (đã thu nhỏ margin) để kiểm tra
+                /*
+                 * ĐIỀU KIỆN THẦN THÁNH:
+                 * 1. !currentHitbox.intersects(bombHitbox): Hiện tại người chơi KHÔNG còn giao nhau với bom (đã bước hẳn ra ngoài)
+                 * 2. nextHitbox.intersects(bombHitbox): Nhưng bước tiếp theo lại định đi XUYÊN VÀO quả bom đó
+                 * -> Lúc này quả bom mới chính thức biến thành bức tường cản vật lý (return true).
+                 */
                 if (!currentHitbox.intersects(bombHitbox) && nextHitbox.intersects(bombHitbox)) {
                     return true;
                 }
@@ -93,6 +82,9 @@ public class CollisionChecker {
         return false;
     }
 
+    // =====================================================================
+    // KIỂM TRA VA CHẠM GIỮA 2 THỰC THỂ (Ví dụ: Player đụng Quái, Lửa liếm Quái)
+    // =====================================================================
     public boolean checkEntity(Rectangle hitboxA, Rectangle hitboxB) {
         return hitboxA.intersects(hitboxB);
     }

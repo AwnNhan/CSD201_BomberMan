@@ -1,11 +1,6 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package config;
 
 /**
- *
  * @author LENOVO
  */
 public class LevelConfig {
@@ -17,9 +12,8 @@ public class LevelConfig {
     private int doorCol;
     private int doorRow;
 
+    // Constructor đầy đủ tham số để nạp cấu hình cho từng Level game
     public LevelConfig(int levelNumber, String mapFilePath, int enemyCount, int enemySpeed, int doorCol, int doorRow) {
-
-    public LevelConfig(int levelNumber, String mapFilePath, int enemyCount, int enemySpeed) {
         this.levelNumber = levelNumber;
         this.mapFilePath = mapFilePath;
         this.enemyCount = enemyCount;
@@ -27,6 +21,10 @@ public class LevelConfig {
         this.doorCol = doorCol;
         this.doorRow = doorRow;
     }
+
+    // =========================================================================
+    // CÁC HÀM GETTER ĐỂ GAMEPANEL TRUY XUẤT DỮ LIỆU
+    // =========================================================================
 
     public int getLevelNumber() {
         return levelNumber;
