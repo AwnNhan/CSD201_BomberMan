@@ -14,12 +14,18 @@ public class LevelConfig {
     private String mapFilePath;
     private int enemyCount;
     private int enemySpeed;
+    private int doorCol;
+    private int doorRow;
+
+    public LevelConfig(int levelNumber, String mapFilePath, int enemyCount, int enemySpeed, int doorCol, int doorRow) {
 
     public LevelConfig(int levelNumber, String mapFilePath, int enemyCount, int enemySpeed) {
         this.levelNumber = levelNumber;
         this.mapFilePath = mapFilePath;
         this.enemyCount = enemyCount;
         this.enemySpeed = enemySpeed;
+        this.doorCol = doorCol;
+        this.doorRow = doorRow;
     }
 
     public int getLevelNumber() {
@@ -36,5 +42,13 @@ public class LevelConfig {
 
     public int getEnemySpeed() {
         return enemySpeed;
+    }
+
+    public int getDoorCol() {
+        return doorCol;
+    }
+
+    public int getDoorRow() {
+        return doorRow;
     }
 }

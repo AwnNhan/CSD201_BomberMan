@@ -13,5 +13,6 @@ public enum IdObject {
     ENEMY,
     BOMB,
     WALL,
-    FLAME 
+    FLAME,
+    DOOR
 }
