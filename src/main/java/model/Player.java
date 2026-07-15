@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
 import core.CollisionChecker;
@@ -11,7 +7,6 @@ import java.awt.Graphics;
 import java.awt.Rectangle;
 
 /**
- *
  * @author Nguyen Minh Phat - CE201621
  */
 public class Player extends GameObject {
@@ -39,6 +34,7 @@ public class Player extends GameObject {
         boolean movingX = false;
         boolean movingY = false;
 
+        // --- ĐỌC DỮ LIỆU ĐIỀU KHIỂN TỪ BÀN PHÍM ---
         if (keyH.upPressed) {
             direction = "UP";
             nextY -= speed;
@@ -47,7 +43,9 @@ public class Player extends GameObject {
             direction = "DOWN";
             nextY += speed;
             movingY = true;
-        } else if (keyH.leftPressed) {
+        }
+
+        if (keyH.leftPressed) {
             direction = "LEFT";
             facingLeft = true;
             nextX -= speed;
@@ -59,30 +57,42 @@ public class Player extends GameObject {
             movingX = true;
         }
 
-        int margin = 6;
-        int assistThreshold = 16;
+        // Cấu hình viền hitbox thu nhỏ để di chuyển mượt hơn
+        int margin = 10;
+        int assistThreshold = 18;
 
+        // Tạo Hitbox HIỆN TẠI phục vụ việc kiểm tra trạng thái thoát khỏi quả bom vừa đặt
+        Rectangle currentHitbox = new Rectangle((int) getX() + margin, (int) getY() + margin,
+                getWidth() - 2 * margin, getHeight() - 2 * margin);
+
+        // =====================================================================
+        // XỬ LÝ DI CHUYỂN TRÊN TRỤC X
+        // =====================================================================
         if (movingX) {
-            Rectangle hitboxX = new Rectangle((int) nextX + margin, (int) nextY + margin,
+            Rectangle hitboxX = new Rectangle((int) nextX + margin, (int) getY() + margin,
                     getWidth() - 2 * margin, getHeight() - 2 * margin);
 
-            if (!cChecker.checkTile(hitboxX)) {
+            // Nếu ô tiếp theo không phải tường VÀ không bị vướng Bom -> Cho phép bước đi
+            if (!cChecker.checkTile(hitboxX) && !cChecker.checkBomb(currentHitbox, hitboxX)) {
                 this.setX(nextX);
             } else {
+                // Hỗ trợ cơ chế tự động lách khe dọc khi đi ngang bị vướng góc tường/bom
                 double centerOfTileY = Math.round(getY() / TILE_SIZE) * TILE_SIZE;
                 double offset = Math.abs(getY() - centerOfTileY);
 
                 if (offset > 0 && offset <= assistThreshold) {
                     if (getY() < centerOfTileY) {
-                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) getY() + margin,
+                        Rectangle slideBox = new Rectangle((int) getX() + margin, (int) (getY() + speed) + margin,
                                 getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        
+                        if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setY(getY() + Math.min(speed, centerOfTileY - getY()));
                         }
                     } else if (getY() > centerOfTileY) {
                         Rectangle slideBox = new Rectangle((int) getX() + margin, (int) (getY() - speed) + margin,
                                 getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        
+                        if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setY(getY() - Math.min(speed, getY() - centerOfTileY));
                         }
                     }
@@ -90,42 +100,51 @@ public class Player extends GameObject {
             }
         }
 
+        // =====================================================================
+        // XỬ LÝ DI CHUYỂN TRÊN TRỤC Y
+        // =====================================================================
         if (movingY) {
-            Rectangle hitboxY = new Rectangle((int) getX() + margin, (int) nextY + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
+            Rectangle hitboxY = new Rectangle((int) getX() + margin, (int) nextY + margin,
+                    getWidth() - 2 * margin, getHeight() - 2 * margin);
 
-            if (!cChecker.checkTile(hitboxY)) {
-                this.setY(nextY); // Dọc trống -> Đi dọc bình thường
+            // Nếu ô tiếp theo không phải tường VÀ không bị vướng Bom -> Cho phép bước đi
+            if (!cChecker.checkTile(hitboxY) && !cChecker.checkBomb(currentHitbox, hitboxY)) {
+                this.setY(nextY);
             } else {
+                // Hỗ trợ cơ chế tự động lách khe ngang khi đi dọc bị vướng góc tường/bom
                 double centerOfTileX = Math.round(getX() / TILE_SIZE) * TILE_SIZE;
                 double offset = Math.abs(getX() - centerOfTileX);
 
-                // Nếu lệch trong ngưỡng cho phép -> Tự động trượt trái/phải để lọt khe
                 if (offset > 0 && offset <= assistThreshold) {
                     if (getX() < centerOfTileX) {
-                        Rectangle slideBox = new Rectangle((int) (getX() + speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        Rectangle slideBox = new Rectangle((int) (getX() + speed) + margin, (int) getY() + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        
+                        if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setX(getX() + Math.min(speed, centerOfTileX - getX()));
                         }
                     } else if (getX() > centerOfTileX) {
-                        Rectangle slideBox = new Rectangle((int) (getX() - speed) + margin, (int) getY() + margin, getWidth() - 2 * margin, getHeight() - 2 * margin);
-                        if (!cChecker.checkTile(slideBox)) {
+                        Rectangle slideBox = new Rectangle((int) (getX() - speed) + margin, (int) getY() + margin,
+                                getWidth() - 2 * margin, getHeight() - 2 * margin);
+                        
+                        if (!cChecker.checkTile(slideBox) && !cChecker.checkBomb(currentHitbox, slideBox)) {
                             this.setX(getX() - Math.min(speed, getX() - centerOfTileX));
                         }
                     }
                 }
             }
         }
+
+        // Đồng bộ lại vị trí hitbox chính xác của lớp cha GameObject để quét sát thương
+        this.hitbox.x = (int) this.X;
+        this.hitbox.y = (int) this.Y;
+
         return true;
     }
 
     @Override
     public boolean render(Graphics g) {
-        g.setColor(Color.WHITE);
-        g.fillRect((int) getX(), (int) getY(), getWidth(), getHeight());
-
-        g.setColor(Color.GREEN);
-        g.drawRect(getHitbox().x, getHitbox().y, getHitbox().width, getHitbox().height);
-
+        // Vẽ được xử lý gián tiếp bằng Sprite qua AssetManager trong GamePanel
         return true;
     }
 

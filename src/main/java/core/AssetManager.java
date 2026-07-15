@@ -5,10 +5,12 @@
 package core;
 
 import java.awt.Color;
+import java.awt.Image;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.util.HashMap;
 import javax.imageio.ImageIO;
+import javax.swing.ImageIcon;
 
 /**
  *
@@ -32,4 +34,12 @@ public class AssetManager {
     public BufferedImage getSprite(String name) {
         return sprites.get(name);
     }
+    public Image loadGif(String filePath) {
+    try {
+        return new ImageIcon(getClass().getResource(filePath)).getImage();
+    } catch (Exception e) {
+        System.out.println("Lỗi tải GIF: " + filePath);
+        return null;
+    }
+}
 }

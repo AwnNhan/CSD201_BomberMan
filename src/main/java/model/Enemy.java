@@ -8,17 +8,24 @@ import java.util.Random;
 
 public class Enemy extends GameObject {
 
-    private int speed = 2; // Tốc độ di chuyển (Nên để số nguyên chẵn như 2 để khớp Grid 48)
-    private int currentDir = -1; // Hướng hiện tại: 0=Lên, 1=Xuống, 2=Trái, 3=Phải
-    private String direction = "DOWN";
-    private static final int TILE_SIZE = 48;
-    private int[][] currentMap;
-    private Random random = new Random();
+    // Giữ cấu hình protected để SmartEnemy và Boss có thể kế thừa và sử dụng
+    protected int speed = 2; // Tốc độ di chuyển (Nên để số nguyên chẵn như 2 để khớp Grid 48)
+    protected int currentDir = -1; // Hướng hiện tại: 0=Lên, 1=Xuống, 2=Trái, 3=Phải
+    protected String direction = "DOWN";
+    protected static final int TILE_SIZE = 48;
+    protected int[][] currentMap;
+    protected Random random = new Random();
+    
+    // Tọa độ mục tiêu (Player) để dành cho AI nâng cao (SmartEnemy, Boss)
+    protected int targetR = -1; 
+    protected int targetC = -1; 
 
+    // Constructor 1: Mặc định (2 tham số)
     public Enemy(double startX, double startY) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
     }
 
+    // Constructor 2: Có chỉnh tốc độ (3 tham số) -> Giải quyết việc sinh quái theo cấu hình Level
     public Enemy(double startX, double startY, int customSpeed) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
         this.speed = customSpeed;
@@ -28,17 +35,20 @@ public class Enemy extends GameObject {
         this.currentMap = map;
     }
 
+    public void setTarget(int r, int c) {
+        this.targetR = r;
+        this.targetC = c;
+    }
+
     @Override
     public boolean update() {
-        if (currentMap == null) {
-            return true;
-        }
+        if (currentMap == null) return true;
 
         // Chỉ đưa ra quyết định chuyển hướng khi Quái vật nằm VỪA KHÍT trong 1 ô vuông lưới
         if ((int) this.X % TILE_SIZE == 0 && (int) this.Y % TILE_SIZE == 0) {
             List<Integer> validDirs = getValidDirections();
 
-            // Bị kẹt cứng 4 bề
+            // Bị kẹt cứng 4 bề thì đứng im
             if (validDirs.isEmpty()) {
                 return true;
             }
@@ -64,11 +74,11 @@ public class Enemy extends GameObject {
             direction = "RIGHT";
         }
 
-        return true;
+        return true; 
     }
 
-    // Hàm check 4 hướng, nếu là ô trống (số 0) thì quái mới được đi vào
-    private List<Integer> getValidDirections() {
+    // Hàm check 4 hướng bao quanh, nếu là ô trống (số 0) thì quái mới được đi vào
+    protected List<Integer> getValidDirections() {
         List<Integer> dirs = new ArrayList<>();
         int col = (int) (this.X / TILE_SIZE);
         int row = (int) (this.Y / TILE_SIZE);
@@ -90,6 +100,7 @@ public class Enemy extends GameObject {
 
     @Override
     public boolean render(Graphics g) {
+        // Hàm này sẽ được GamePanel ghi đè bằng hình ảnh vẽ đè lên, để tạm màu đỏ phòng hờ
         g.setColor(Color.RED);
         g.fillRect((int) getX(), (int) getY(), getWidth(), getHeight());
         return true;
