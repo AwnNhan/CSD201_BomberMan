@@ -8,9 +8,12 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+<<<<<<< HEAD
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+=======
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
 import javax.swing.JPanel;
 import map.MapManager;
 import model.Bomb;
@@ -57,14 +60,23 @@ public class GamePanel extends JPanel implements Runnable {
     public String[] mapList = {"Map 1 (Default)", "Map 2 (Smart Enemy)", "Map 3 (Boss)"};
     public int currentMapIndex = 0;
 
+<<<<<<< HEAD
     // === HỆ THỐNG QUẢN LÝ CORE ===
     public MapManager mapM;
     public GraphConverter graphConverter = new GraphConverter();
+=======
+    // === HỆ THỐNG QUẢN LÝ MỚI ===
+    MapManager mapM;
+    GraphConverter graphConverter = new GraphConverter();
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
     public CollisionChecker cChecker;
     public CustomLinkedList objectList; // Băng chuyền O(1)
     public Player player;
     public BombManager bombManager;
+<<<<<<< HEAD
     public boolean doorSpawned = false;
+=======
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
 
     public GamePanel() {
         this.setPreferredSize(new Dimension(screenWidth, screenHeight));
@@ -76,6 +88,11 @@ public class GamePanel extends JPanel implements Runnable {
         mapM = new MapManager();
         cChecker = new CollisionChecker(this);
         objectList = new CustomLinkedList();
+<<<<<<< HEAD
+=======
+
+        // Khởi tạo BombManager
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
         bombManager = new BombManager(this);
 
         // Nạp tài nguyên hình ảnh
@@ -86,12 +103,15 @@ public class GamePanel extends JPanel implements Runnable {
         assetManager.loadImage("ENEMY_UP", "/sprites/enemy_up.png");
         assetManager.loadImage("ENEMY_DOWN", "/sprites/enemy_down.png");
         assetManager.loadImage("BOMB_COOL", "/sprites/atomic_bomb.png");
+<<<<<<< HEAD
         assetManager.loadImage("DOOR", "/sprites/door.png");
         assetManager.loadImage("BOSS_DOWN", "/sprites/boss_down.png");
         assetManager.loadImage("BOSS_LEFT", "/sprites/boss_left.png");
         assetManager.loadImage("BOSS_RIGHT", "/sprites/boss_right.png");
         assetManager.loadImage("BOSS_UP", "/sprites/boss_up.png");
         assetManager.loadImage("BOSS_BOM", "/sprites/boss_bom.png");
+=======
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
     }
 
     public void startGameThread() {
@@ -160,6 +180,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
 
+<<<<<<< HEAD
         Random rand = new Random();
         int addedEnemies = 0;
         int enemyCount = currentConfig.getEnemyCount();
@@ -183,6 +204,8 @@ public class GamePanel extends JPanel implements Runnable {
             addedEnemies++;
         }
 
+=======
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
         gameState = GameState.PLAYING;
     }
 
@@ -297,11 +320,21 @@ public class GamePanel extends JPanel implements Runnable {
         // --- LOGIC TRONG TRẬN ĐẤU CHÍNH THỨC ---
         if (gameState == GameState.PLAYING) {
 
+<<<<<<< HEAD
+=======
+            // 1. Giao việc quản lý đặt bom cho BombManager
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
             bombManager.handlePlacingBomb(player, keyH);
             bombManager.updateBombs();
 
             int[][] mapWithBombs = bombManager.generateMapWithBombs();
 
+<<<<<<< HEAD
+=======
+            // =================================================================
+            // 4. VÒNG LẶP UPDATE THẦN THÁNH: O(1) CHO MỌI THAO TÁC XÓA
+            // =================================================================
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
             CustomLinkedList.Node current = objectList.head;
             int enemyCount = 0;
             boolean invincible = System.currentTimeMillis() < invincibleUntil;
@@ -421,7 +454,11 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+<<<<<<< HEAD
     @Override
+=======
+     @Override
+>>>>>>> bf8d061cc291c57006de33f59756a599baecb933
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
