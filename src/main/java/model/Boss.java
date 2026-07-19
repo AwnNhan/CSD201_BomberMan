@@ -4,6 +4,7 @@ import algorithm.CustomLinkedList;
 import algorithm.GridPoint;
 import algorithm.MinHeapQueue;
 import algorithm.PathFinder;
+import core.AssetManager;
 import java.awt.Color;
 import java.awt.Graphics;
 import java.util.ArrayList;
@@ -24,18 +25,18 @@ public class Boss extends GameObject {
     private GridPoint targetPos;
     private String direction = "DOWN";
     private long lastSkillTime = 0;
-    
+    private AssetManager assetManager;
     // Biến tạo thời gian bất tử cho Boss (tránh 1 ngọn lửa trừ máu liên tục 60 lần/giây)
     private long invincibleUntil = 0; 
 
     // Thêm các biến để đi Random khi bị kẹt
     private int currentDir = -1;
 
-    public Boss(double startX, double startY, int customSpeed) {
+    public Boss(double startX, double startY, int customSpeed,AssetManager assetManager) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
         this.speed = customSpeed + 1.0; // Boss di chuyển nhanh
         this.pathFinder = new PathFinder();
-        
+        this.assetManager = assetManager;
         // MỚI: Thiết lập để 8 giây sau khi sinh ra mới ném bom lần đầu (Cooldown là 15s)
         // Hệ thống sẽ lấy Hiện tại trừ đi 7 giây -> Mất thêm 8 giây nữa mới đủ 15 giây để kích hoạt.
         this.lastSkillTime = System.currentTimeMillis() - 7000; 
@@ -206,14 +207,36 @@ public class Boss extends GameObject {
 
     @Override
     public boolean render(Graphics g) {
-        // Nhấp nháy màu trắng nếu Boss đang trong thời gian bất tử (bị thương)
+       int x = (int) getX();
+        int y = (int) getY();
+        int w = getWidth();
+        int h = getHeight();
+
+        // 1. VẼ HÌNH ẢNH BOSS THEO HƯỚNG
+        if (assetManager != null) {
+            String dir = getDirection();
+            java.awt.Image bossImg = null;
+
+            if ("UP".equalsIgnoreCase(dir)) {
+                bossImg = assetManager.getSprite("BOSS_UP");
+            } else if ("DOWN".equalsIgnoreCase(dir)) {
+                bossImg = assetManager.getSprite("BOSS_DOWN");
+            } else if ("LEFT".equalsIgnoreCase(dir)) {
+                bossImg = assetManager.getSprite("BOSS_LEFT");
+            } else if ("RIGHT".equalsIgnoreCase(dir)) {
+                bossImg = assetManager.getSprite("BOSS_RIGHT");
+            }
+
+            if (bossImg != null) {
+                g.drawImage(bossImg, x, y, w, h, null);
+            }
+        }
+
+        // 2. GIỮ NGUYÊN DÒNG CODE NHẤP NHÁY MÀU TRẮNG
         if (System.currentTimeMillis() < invincibleUntil && (System.currentTimeMillis() / 100 % 2 == 0)) {
             g.setColor(Color.WHITE);
-        } else {
-            g.setColor(new Color(138, 43, 226)); // Màu tím mặc định
+            g.fillRect(x, y, w, h);
         }
-        g.fillRect((int) getX(), (int) getY(), getWidth(), getHeight());
-
         // Vẽ thanh máu (HP)
         g.setColor(Color.RED);
         g.fillRect((int) getX(), (int) getY() - 10, TILE_SIZE, 5);
