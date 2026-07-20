@@ -59,6 +59,11 @@ tuan,0
 tuan,0
 tuan,0
 tuan,0
+Player,0
+Player,0
+Player,0
+Player,0
+Player,0
 Current,100
 guma,100
 Player,100
@@ -73,6 +78,7 @@ Current,200
 tuan,200
 tuan,200
 tuan,200
+Player,200
 Current,300
 Current,300
 faker,300
