@@ -57,12 +57,12 @@ public class GamePanel extends JPanel implements Runnable {
     public String[] mapList = {"Map 1 (Default)", "Map 2 (Smart Enemy)", "Map 3 (Boss)"};
     public int currentMapIndex = 0;
 
-
     // === HỆ THỐNG QUẢN LÝ CORE ===
     public MapManager mapM;
     public GraphConverter graphConverter = new GraphConverter();
     public CollisionChecker cChecker;
-    public CustomLinkedList objectList; // Băng chuyền O(1)
+    public SoundManager soundManager = new SoundManager();
+    public CustomLinkedList objectList;
     public Player player;
     public BombManager bombManager;
 
@@ -80,7 +80,6 @@ public class GamePanel extends JPanel implements Runnable {
         objectList = new CustomLinkedList();
 
         // Khởi tạo BombManager
-
         bombManager = new BombManager(this);
 
         // Nạp tài nguyên hình ảnh
@@ -166,7 +165,6 @@ public class GamePanel extends JPanel implements Runnable {
             }
         }
 
-
         Random rand = new Random();
         int addedEnemies = 0;
         int enemyCount = currentConfig.getEnemyCount();
@@ -184,7 +182,7 @@ public class GamePanel extends JPanel implements Runnable {
             } else if (currentLevel == 2) {
                 objectList.addLast(new SmartEnemy(startX, startY, currentConfig.getEnemySpeed()));
             } else {
-                objectList.addLast(new Boss(startX, startY, currentConfig.getEnemySpeed(),this.assetManager));
+                objectList.addLast(new Boss(startX, startY, currentConfig.getEnemySpeed(), this.assetManager));
                 break; // Màn Boss chỉ sinh 1 Boss duy nhất
             }
             addedEnemies++;
@@ -197,6 +195,7 @@ public class GamePanel extends JPanel implements Runnable {
         // --- LOGIC MENU & ĐIỀU HƯỚNG MÀN HÌNH ---
         if (gameState == GameState.MENU) {
             if (keyH.upPressed) {
+                soundManager.playSFX(3);
                 menuOption--;
                 if (menuOption < 0) {
                     menuOption = 4;
@@ -204,6 +203,7 @@ public class GamePanel extends JPanel implements Runnable {
                 keyH.upPressed = false;
             }
             if (keyH.downPressed) {
+                soundManager.playSFX(3);
                 menuOption++;
                 if (menuOption > 4) {
                     menuOption = 0;
@@ -211,6 +211,7 @@ public class GamePanel extends JPanel implements Runnable {
                 keyH.downPressed = false;
             }
             if (keyH.enterPressed) {
+                soundManager.playSFX(3);
                 if (menuOption == 0) {
                     gameState = GameState.MAP_SELECTION;
                 } else if (menuOption == 1) {
@@ -229,14 +230,17 @@ public class GamePanel extends JPanel implements Runnable {
 
         if (gameState == GameState.TUTORIAL) {
             if (keyH.leftPressed) {
+                soundManager.playSFX(3);
                 uiManager.prevTutorialPage(); // Lùi trang
                 keyH.leftPressed = false;
             }
             if (keyH.rightPressed) {
+                soundManager.playSFX(3);
                 uiManager.nextTutorialPage(); // Tiến trang
                 keyH.rightPressed = false;
             }
             if (keyH.escapePressed || keyH.enterPressed) {
+                soundManager.playSFX(3);
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
                 keyH.enterPressed = false;
@@ -247,6 +251,7 @@ public class GamePanel extends JPanel implements Runnable {
         // Tách riêng kiểm tra cho ABOUT_US và LEADERBOARD (Vì TUTORIAL đã được tách ra ở trên)
         if (gameState == GameState.ABOUT_US || gameState == GameState.LEADERBOARD) {
             if (keyH.escapePressed) {
+                soundManager.playSFX(3);
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
             }
@@ -255,6 +260,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         if (gameState == GameState.MAP_SELECTION) {
             if (keyH.leftPressed) {
+                soundManager.playSFX(3);
                 currentMapIndex--;
                 if (currentMapIndex < 0) {
                     currentMapIndex = mapList.length - 1;
@@ -262,6 +268,7 @@ public class GamePanel extends JPanel implements Runnable {
                 keyH.leftPressed = false;
             }
             if (keyH.rightPressed) {
+                soundManager.playSFX(3);
                 currentMapIndex++;
                 if (currentMapIndex >= mapList.length) {
                     currentMapIndex = 0;
@@ -269,12 +276,14 @@ public class GamePanel extends JPanel implements Runnable {
                 keyH.rightPressed = false;
             }
             if (keyH.enterPressed) {
+                soundManager.playSFX(3);
                 String inputName = javax.swing.JOptionPane.showInputDialog(this, "Nhập tên người chơi:");
                 playerName = (inputName != null && !inputName.trim().isEmpty()) ? inputName.trim() : "Player";
                 resetGame();
                 keyH.enterPressed = false;
             }
             if (keyH.escapePressed) {
+                soundManager.playSFX(3);
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
             }
@@ -313,7 +322,6 @@ public class GamePanel extends JPanel implements Runnable {
             // =================================================================
             // 4. VÒNG LẶP UPDATE THẦN THÁNH: O(1) CHO MỌI THAO TÁC XÓA
             // =================================================================
-
             CustomLinkedList.Node current = objectList.head;
             int enemyCount = 0;
             boolean invincible = System.currentTimeMillis() < invincibleUntil;
@@ -347,6 +355,10 @@ public class GamePanel extends JPanel implements Runnable {
                 else if (obj.getId() == IdObject.DOOR) {
                     if (doorSpawned && cChecker.checkEntity(player.getHitbox(), obj.getHitbox())) {
                         isVictory = true;
+
+                        soundManager.stopBGM();
+                        soundManager.playSFX(3);
+
                         playerLives++;
                         config.LevelManager.unlockNextLevel(currentMapIndex);
                         if (currentMapIndex == mapList.length - 1) {
@@ -374,11 +386,13 @@ public class GamePanel extends JPanel implements Runnable {
                                         if (boss.getHp() <= 0) {
                                             objectList.removeNode(inner);
                                             score += 500;
+                                            soundManager.playSFX(4);
                                         }
                                     }
                                 } else {
                                     objectList.removeNode(inner);
                                     score += 100;
+                                    soundManager.playSFX(4);
                                 }
                             }
                             inner = inner.next;
@@ -425,6 +439,9 @@ public class GamePanel extends JPanel implements Runnable {
         playerLives--;
         if (playerLives <= 0) {
             isGameOver = true;
+
+            soundManager.stopBGM();
+            soundManager.playSFX(5);
             scoreBoard.insertScore(playerName, score);
         } else {
             player.setX(tileSize);
@@ -432,7 +449,6 @@ public class GamePanel extends JPanel implements Runnable {
             invincibleUntil = System.currentTimeMillis() + 2000;
         }
     }
-
 
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -577,7 +593,7 @@ public class GamePanel extends JPanel implements Runnable {
                 }
 
                 if (shouldDraw) {
-                  if (b.isBossBomb()) {
+                    if (b.isBossBomb()) {
                         // VẼ BOM CỦA BOSS BẰNG HÌNH ẢNH
                         if (assetManager.getSprite("BOSS_BOM") != null) {
                             g2.drawImage(assetManager.getSprite("BOSS_BOM"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
@@ -591,8 +607,8 @@ public class GamePanel extends JPanel implements Runnable {
                             g2.drawImage(assetManager.getSprite("BOMB_COOL"), (int) obj.getX(), (int) obj.getY() - (bombHeight - tileSize) + 6, tileSize, bombHeight, null);
                         } else {
                             obj.render(g2);
+                        }
                     }
-                }
                 }
             } else if (obj.getId() == IdObject.FLAME || obj.getId() == IdObject.DOOR) {
                 obj.render(g2);
