@@ -16,7 +16,6 @@ import java.awt.Image;
  */
 public class UIManager {
 
-    // Khai báo sẵn các Font để tái sử dụng, tránh tạo mới (new Font) 60 lần/giây gây tốn RAM
     private final Font titleFont = new Font("Arial", Font.BOLD, 48);
     private final Font menuFont = new Font("Arial", Font.BOLD, 26);
     private final Font subTitleFont = new Font("Arial", Font.BOLD, 36);
@@ -31,9 +30,9 @@ public class UIManager {
     private Image tutorialGif2;
     private Image tutorialGif3;
     private Image tutorialGif4;
-   
+
     public UIManager() {
-       try {
+        try {
             tutorialGif1 = new javax.swing.ImageIcon(getClass().getResource("/sprites/tutorial_move.gif")).getImage();
             tutorialGif2 = new javax.swing.ImageIcon(getClass().getResource("/sprites/tutorial_bom.gif")).getImage();
             tutorialGif3 = new javax.swing.ImageIcon(getClass().getResource("/sprites/tutorial_pause.gif")).getImage();
@@ -43,11 +42,12 @@ public class UIManager {
             e.printStackTrace();
         }
     }
+
     public void prevTutorialPage() {
-      if (tutorialPage > 0) {
+        if (tutorialPage > 0) {
             tutorialPage--;
         } else {
-            tutorialPage = maxTutorialPage; 
+            tutorialPage = maxTutorialPage;
         }
     }
 
@@ -55,9 +55,10 @@ public class UIManager {
         if (tutorialPage < maxTutorialPage) {
             tutorialPage++;
         } else {
-            tutorialPage = 0; 
+            tutorialPage = 0;
         }
     }
+
     // =========================================================================
     // 1. VẼ MÀN HÌNH MENU CHÍNH
     // =========================================================================
@@ -112,11 +113,10 @@ public class UIManager {
     // =========================================================================
     // 3. VẼ MÀN HÌNH HƯỚNG DẪN (TUTORIAL)
     // =========================================================================
-   public void drawTutorial(Graphics2D g2, int screenWidth, int screenHeight) {
+    public void drawTutorial(Graphics2D g2, int screenWidth, int screenHeight) {
         g2.setColor(new Color(30, 40, 40));
         g2.fillRect(0, 0, screenWidth, screenHeight);
 
-        // Tiêu đề chính và số trang (1/4, 2/4, 3/4, 4/4)
         g2.setColor(Color.WHITE);
         g2.setFont(subTitleFont);
         g2.drawString("TUTORIAL (" + (tutorialPage + 1) + "/" + (maxTutorialPage + 1) + ")", 50, 80);
@@ -126,63 +126,56 @@ public class UIManager {
         // --- CẤU HÌNH TỌA ĐỘ TỰ ĐỘNG ---
         int gifWidth = 280;
         int gifHeight = 210;
-        int gifX = (screenWidth - gifWidth) / 2; // Căn giữa GIF theo chiều ngang
-        int gifY = 110;                           // Đặt GIF ở phía trên
+        int gifX = (screenWidth - gifWidth) / 2;
+        int gifY = 110;
 
-        int textX = 120;                          // Thụt lề trái cho phần chữ thẳng hàng đẹp mắt
-        int titleY = 360;                         // Tiêu đề trang (ngay dưới GIF, cách GIF 40px)
-        int lineStartY = 405;                     // Dòng chữ đầu tiên
-        int lineSpacing = 35;                     // Khoảng cách giãn dòng vừa phải để không bị dí sát nhau
+        int textX = 120;
+        int titleY = 360;
+        int lineStartY = 405;
+        int lineSpacing = 35;
 
-      
         if (tutorialPage == 0) {
             if (tutorialGif1 != null) {
                 g2.drawImage(tutorialGif1, gifX, gifY, gifWidth, gifHeight, null);
             }
             g2.setColor(Color.YELLOW);
             g2.drawString("PAGE 1: PLAYER MOVEMENT", textX, titleY);
-            
+
             g2.setColor(Color.LIGHT_GRAY);
             g2.drawString("- Press W to move up.", textX, lineStartY);
             g2.drawString("- Press S to move down.", textX, lineStartY + lineSpacing);
             g2.drawString("- Press A to move left.", textX, lineStartY + 2 * lineSpacing);
             g2.drawString("- Press D to move right.", textX, lineStartY + 3 * lineSpacing);
-        } 
-       
-        else if (tutorialPage == 1) {
+        } else if (tutorialPage == 1) {
             if (tutorialGif2 != null) {
                 g2.drawImage(tutorialGif2, gifX, gifY, gifWidth, gifHeight, null);
             }
             g2.setColor(Color.YELLOW);
             g2.drawString("PAGE 2: HOW TO USE BOMBS", textX, titleY);
-            
+
             g2.setColor(Color.LIGHT_GRAY);
             g2.drawString("- Press SPACEBAR to place a bomb.", textX, lineStartY);
             g2.drawString("- Bombs will explode after 2 seconds.", textX, lineStartY + lineSpacing);
             g2.drawString("- Run away quickly from the explosion range!", textX, lineStartY + 2 * lineSpacing);
             g2.drawString("- Destroy soft bricks to clear the path.", textX, lineStartY + 3 * lineSpacing);
-        } 
-       
-        else if (tutorialPage == 2) {
+        } else if (tutorialPage == 2) {
             if (tutorialGif3 != null) {
                 g2.drawImage(tutorialGif3, gifX, gifY, gifWidth, gifHeight, null);
             }
             g2.setColor(Color.YELLOW);
             g2.drawString("PAGE 3: PAUSE", textX, titleY);
-            
+
             g2.setColor(Color.LIGHT_GRAY);
             g2.drawString("- Press P to pause game.", textX, lineStartY);
             g2.drawString("- Press P again to continue.", textX, lineStartY + lineSpacing);
             g2.drawString("- Press Esc to return menu screen.", textX, lineStartY + 2 * lineSpacing);
-        } 
-       
-        else if (tutorialPage == 3) {
+        } else if (tutorialPage == 3) {
             if (tutorialGif4 != null) {
                 g2.drawImage(tutorialGif4, gifX, gifY, gifWidth, gifHeight, null);
             }
             g2.setColor(Color.YELLOW);
             g2.drawString("PAGE 4: NEXT LEVEL AND MECHANICS", textX, titleY);
-            
+
             g2.setColor(Color.LIGHT_GRAY);
             g2.drawString("- Go to the trophy to move on to the next level.", textX, lineStartY);
             g2.drawString("- When you pass the level, you'll get an extra life.", textX, lineStartY + lineSpacing);
@@ -190,14 +183,12 @@ public class UIManager {
             g2.drawString("- If you choose map, points and life will reset to default.", textX, lineStartY + 3 * lineSpacing);
         }
 
-        // Hướng dẫn lật trang ở góc dưới (Đã đổi thành thông báo phím A / D)
         g2.setFont(italicFont);
         g2.setColor(Color.CYAN);
         String pageHint = "Use A / D keys to flip pages ->";
         FontMetrics fm = g2.getFontMetrics();
         g2.drawString(pageHint, screenWidth - fm.stringWidth(pageHint) - 40, screenHeight - 50);
 
-        // Nút quay lại Menu
         drawBackButtonHint(g2, screenHeight);
     }
 
@@ -317,5 +308,5 @@ public class UIManager {
         g2.setColor(Color.ORANGE);
         g2.drawString("<- Press ESC to Return Menu", 40, screenHeight - 50);
     }
-  
+
 }

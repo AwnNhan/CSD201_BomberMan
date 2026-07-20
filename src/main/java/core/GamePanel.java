@@ -97,6 +97,10 @@ public class GamePanel extends JPanel implements Runnable {
         assetManager.loadImage("BOSS_UP", "/sprites/boss_up.png");
         assetManager.loadImage("BOSS_BOM", "/sprites/boss_bom.png");
 
+        // =========================================================================
+        // PHÁT NHẠC NỀN MENU NGAY KHI VỪA MỞ GAME
+        // =========================================================================
+        soundManager.playBGM(10);
     }
 
     public void startGameThread() {
@@ -131,6 +135,9 @@ public class GamePanel extends JPanel implements Runnable {
         // Nạp cấu hình từ LevelManager
         LevelConfig currentConfig = config.LevelManager.getLevel(currentMapIndex);
         mapM.loadMap(currentConfig.getMapFilePath());
+
+        // Kích hoạt nhạc nền của màn chơi (Tự động ngắt nhạc Menu đang phát)
+        soundManager.changeTheme(currentMapIndex);
 
         cChecker = new CollisionChecker(this);
         graphConverter.updateGraph(mapM.getMapMatrix());
@@ -306,6 +313,11 @@ public class GamePanel extends JPanel implements Runnable {
                 isVictory = false;
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
+
+                // =========================================================================
+                // PHÁT LẠI NHẠC MENU KHI THOÁT TỪ MÀN HÌNH KẾT THÚC (WIN/LOSE) VỀ MENU CHÍNH
+                // =========================================================================
+                soundManager.playBGM(10);
             }
             return;
         }
@@ -357,7 +369,7 @@ public class GamePanel extends JPanel implements Runnable {
                         isVictory = true;
 
                         soundManager.stopBGM();
-                        soundManager.playSFX(3);
+                        soundManager.playSFX(7); // Đã sửa nhẹ phát đúng SFX Victory (Index 7)
 
                         playerLives++;
                         config.LevelManager.unlockNextLevel(currentMapIndex);
@@ -428,9 +440,17 @@ public class GamePanel extends JPanel implements Runnable {
             if (keyH.escapePressed) {
                 scoreBoard.insertScore(playerName, score);
                 isVictory = false;
-                resetGame();
+                
+                // =========================================================================
+                // ĐÃ FIX BUG: Loại bỏ hoàn toàn dòng resetGame() dư thừa gây đè nhạc!
+                // =========================================================================
+                soundManager.stopBGM(); // Tắt nhạc Map đang chơi
+                
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
+
+                // Phát lại nhạc nền Menu
+                soundManager.playBGM(10); 
             }
         }
     }
@@ -598,7 +618,7 @@ public class GamePanel extends JPanel implements Runnable {
                         if (assetManager.getSprite("BOSS_BOM") != null) {
                             g2.drawImage(assetManager.getSprite("BOSS_BOM"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
                         } else {
-                            obj.render(g2); // Dự phòng vẽ vòng tròn màu tím nếu chưa tải được ảnh
+                            obj.render(g2); 
                         }
                     } else {
                         // GIỮ NGUYÊN CODE VẼ BOM NGƯỜI CHƠI CỦA BẠN

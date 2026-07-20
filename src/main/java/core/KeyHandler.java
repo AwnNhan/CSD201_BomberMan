@@ -14,10 +14,9 @@ import java.awt.event.KeyListener;
 public class KeyHandler implements KeyListener {
 
     public boolean upPressed, downPressed, leftPressed, rightPressed, pausePressed;
-    // BỔ SUNG: Biến kiểm soát trạng thái phím Space của bạn
-    public boolean spacePressed; 
-    // Thêm vào danh sách biến public ở đầu class
-public boolean enterPressed, escapePressed; 
+    public boolean spacePressed;
+    public boolean enterPressed, escapePressed;
+
     @Override
     public void keyTyped(KeyEvent e) {
         // Không dùng hàm này cho game thời gian thực
@@ -25,7 +24,7 @@ public boolean enterPressed, escapePressed;
 
     @Override
     public void keyPressed(KeyEvent e) {
-        int code = e.getKeyCode(); // Lấy mã của phím vừa bấm
+        int code = e.getKeyCode();
 
         if (code == KeyEvent.VK_W) {
             upPressed = true;
@@ -59,9 +58,8 @@ public boolean enterPressed, escapePressed;
 
     @Override
     public void keyReleased(KeyEvent e) {
-        int code = e.getKeyCode(); // Lấy mã của phím vừa nhả ra
+        int code = e.getKeyCode(); 
 
-        // Khi nhả phím ra, phải tắt công tắc đi
         if (code == KeyEvent.VK_W) {
             upPressed = false;
         }
@@ -79,7 +77,6 @@ public boolean enterPressed, escapePressed;
             pausePressed = false;
         }
 
-        // BỔ SUNG: Khi người chơi nhả phím Space ra thì reset lại công tắc
         if (code == KeyEvent.VK_SPACE) {
             spacePressed = false;
         }
