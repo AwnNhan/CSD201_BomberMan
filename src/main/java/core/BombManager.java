@@ -10,9 +10,9 @@ import model.Player;
 public class BombManager {
 
     private final GamePanel gp;
-    public final MinHeapQueue bombQueue; // Public để Boss có thể truy cập xài chung hàng đợi
+    public final MinHeapQueue bombQueue; 
     private long lastBombTime = 0;
-    private final long bombCooldown = 500; // Thời gian giãn cách giữa 2 lần đặt bom (ms)
+    private final long bombCooldown = 500; 
     public SoundManager soundManager = new SoundManager();
 
     public BombManager(GamePanel gp) {
@@ -20,7 +20,6 @@ public class BombManager {
         this.bombQueue = new MinHeapQueue();
     }
 
-    // Reset lại hàng đợi khi người chơi Reset Game hoặc đổi màn
     public void reset() {
         while (!bombQueue.isEmpty()) {
             bombQueue.dequeue();
@@ -28,19 +27,16 @@ public class BombManager {
         lastBombTime = 0;
     }
 
-    // Xử lý logic khi người chơi bấm nút đặt bom (Phím SPACE)
     public void handlePlacingBomb(Player player, KeyHandler keyH) {
         long currentTimeMs = System.currentTimeMillis();
 
         if (keyH.spacePressed && (currentTimeMs - lastBombTime >= bombCooldown)) {
 
-            // --- ĐẾM SỐ BOM HIỆN CÓ CỦA PLAYER TRÊN BẢN ĐỒ ---
             int currentBombCount = 0;
             CustomLinkedList.Node countTemp = gp.objectList.head;
             while (countTemp != null) {
                 if (countTemp.data.getId() == IdObject.BOMB) {
                     Bomb checkBomb = (Bomb) countTemp.data;
-                    // Chỉ đếm bom của Player, bỏ qua bom của Boss ném ra
                     if (!checkBomb.isBossBomb()) {
                         currentBombCount++;
                     }
@@ -48,17 +44,14 @@ public class BombManager {
                 countTemp = countTemp.next;
             }
 
-            // GIỚI HẠN: Nếu Player đã đặt đủ 2 quả bom trên sân thì không cho đặt thêm
             if (currentBombCount >= 2) {
                 keyH.spacePressed = false;
                 return;
             }
 
-            // Tính toán toạ độ bom căn khít theo ô lưới TileSize
             int bombX = ((int) player.getX() + gp.tileSize / 2) / gp.tileSize * gp.tileSize;
             int bombY = ((int) player.getY() + gp.tileSize / 2) / gp.tileSize * gp.tileSize;
 
-            // Kiểm tra xem tại ô này đã có quả bom nào nằm sẵn chưa (Tránh đặt trùng vị trí)
             boolean hasBombHere = false;
             CustomLinkedList.Node temp = gp.objectList.head;
             while (temp != null) {
@@ -69,9 +62,7 @@ public class BombManager {
                 temp = temp.next;
             }
 
-            // Nếu ô trống, tiến hành nạp bom vào hàng đợi MinHeap và danh sách thực thể
             if (!hasBombHere) {
-                // Tham số cuối là 'false' vì đây là bom của Player
                 Bomb b = new Bomb(bombX, bombY, gp.tileSize, gp.tileSize, IdObject.BOMB, currentTimeMs + 3000, false);
                 bombQueue.enqueue(b);
                 gp.objectList.addLast(b);
@@ -82,7 +73,6 @@ public class BombManager {
         }
     }
 
-    // Xử lý cập nhật thời gian và kích nổ quả bom đến hạn tự động trong Game Loop
     public void updateBombs() {
         long currentTimeMs = System.currentTimeMillis();
 
@@ -102,14 +92,12 @@ public class BombManager {
         }
     }
 
-    // Xử lý lan tỏa tia lửa nổ theo 4 hướng độc lập linh hoạt theo kích thước Map
     private void executeExplosion(Bomb bomb) {
         soundManager.playSFX(0);
         int bx = (int) bomb.getX();
         int by = (int) bomb.getY();
         boolean isBossFlame = bomb.isBossBomb();
 
-        // Tạo tâm nổ dạng mây nấm (CENTER)
         gp.objectList.addLast(new Flame(bx, by, gp.tileSize, gp.tileSize, IdObject.FLAME, "CENTER", isBossFlame));
 
         int[][] dirs = {{-1, 0}, {1, 0}, {0, -1}, {0, 1}}; // Lên, Xuống, Trái, Phải

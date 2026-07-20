@@ -67,12 +67,6 @@ public class CollisionChecker {
             if (current.data.getId() == IdObject.BOMB) {
                 Rectangle bombHitbox = current.data.getHitbox();
 
-                /*
-                 * ĐIỀU KIỆN THẦN THÁNH:
-                 * 1. !currentHitbox.intersects(bombHitbox): Hiện tại người chơi KHÔNG còn giao nhau với bom (đã bước hẳn ra ngoài)
-                 * 2. nextHitbox.intersects(bombHitbox): Nhưng bước tiếp theo lại định đi XUYÊN VÀO quả bom đó
-                 * -> Lúc này quả bom mới chính thức biến thành bức tường cản vật lý (return true).
-                 */
                 if (!currentHitbox.intersects(bombHitbox) && nextHitbox.intersects(bombHitbox)) {
                     return true;
                 }

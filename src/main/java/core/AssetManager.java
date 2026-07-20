@@ -17,12 +17,11 @@ import javax.swing.ImageIcon;
  * @author Admin
  */
 public class AssetManager {
+
     private HashMap<String, BufferedImage> sprites = new HashMap<>();
 
-    // --- HÀM MỚI: Tải ảnh từ thư mục ---
     public void loadImage(String name, String filePath) {
         try {
-            // Lấy ảnh từ đường dẫn (ví dụ: "/sprites/player.png")
             BufferedImage image = ImageIO.read(getClass().getResourceAsStream(filePath));
             sprites.put(name, image);
             System.out.println("✅ Tải ảnh thành công: " + name);
@@ -31,15 +30,17 @@ public class AssetManager {
             e.printStackTrace();
         }
     }
+
     public BufferedImage getSprite(String name) {
         return sprites.get(name);
     }
+
     public Image loadGif(String filePath) {
-    try {
-        return new ImageIcon(getClass().getResource(filePath)).getImage();
-    } catch (Exception e) {
-        System.out.println("Lỗi tải GIF: " + filePath);
-        return null;
+        try {
+            return new ImageIcon(getClass().getResource(filePath)).getImage();
+        } catch (Exception e) {
+            System.out.println("Lỗi tải GIF: " + filePath);
+            return null;
+        }
     }
-}
 }
