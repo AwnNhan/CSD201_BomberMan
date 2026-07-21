@@ -178,11 +178,27 @@ public class GamePanel extends JPanel implements Runnable {
         int mapRows = mapM.getMaxRow();
         int[][] matrix = mapM.getMapMatrix();
         List<int[]> emptyTiles = new ArrayList<>();
+        
+        int currentLevel = currentConfig.getLevelNumber();
+        int halfCol = mapCols / 2;
 
+        // Quét bản đồ để tìm ô trống
         for (int r = 0; r < mapRows; r++) {
             for (int c = 0; c < mapCols; c++) {
-                if (matrix[r][c] == 0 && (r > 3 || c > 3)) {
-                    emptyTiles.add(new int[]{r, c});
+                if (matrix[r][c] == 0) {
+                    
+                    // NẾU LÀ MÀN BOSS: Chỉ lấy các ô trống ở nửa BÊN PHẢI bản đồ
+                    if (currentLevel >= 3) {
+                        if (c >= halfCol) {
+                            emptyTiles.add(new int[]{r, c});
+                        }
+                    } 
+                    // NẾU LÀ MÀN QUÁI THƯỜNG: Lấy ngẫu nhiên, chỉ né khu vực an toàn của Player (Góc trái trên)
+                    else {
+                        if (r > 3 || c > 3) {
+                            emptyTiles.add(new int[]{r, c});
+                        }
+                    }
                 }
             }
         }
@@ -190,7 +206,6 @@ public class GamePanel extends JPanel implements Runnable {
         Random rand = new Random();
         int addedEnemies = 0;
         int enemyCount = currentConfig.getEnemyCount();
-        int currentLevel = currentConfig.getLevelNumber();
 
         while (addedEnemies < enemyCount && !emptyTiles.isEmpty()) {
             int randomIndex = rand.nextInt(emptyTiles.size());

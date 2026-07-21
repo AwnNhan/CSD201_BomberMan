@@ -137,16 +137,5 @@ tuan,600
 tuan,600
 Player,900
 cho tuan,700
-tuan,900
-tuan,900
-tuan,900
-tuan,900
-tuan,900
-setrhdgj,1400
-tuan,1400
-tuan,1400
-tuan,1400
-tuan,1400
-phuc,1400
-phuc,1400
-phuc,1400
+tai,1400
+tai,1400
