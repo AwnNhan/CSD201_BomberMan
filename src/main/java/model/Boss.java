@@ -13,8 +13,8 @@ import java.util.Random;
 
 public class Boss extends GameObject {
 
-    private int hp = 5;
-    private int maxHp = 5;
+    private int hp = 1;
+    private int maxHp = 1;
     private double speed;
     private static final int TILE_SIZE = 48;
 
