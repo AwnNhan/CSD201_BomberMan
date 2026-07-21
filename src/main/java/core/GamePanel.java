@@ -102,7 +102,8 @@ public class GamePanel extends JPanel implements Runnable {
         assetManager.loadImage("BOSS_RIGHT", "/sprites/boss_right.png");
         assetManager.loadImage("BOSS_UP", "/sprites/boss_up.png");
         assetManager.loadImage("BOSS_BOM", "/sprites/boss_bom.png");
-
+        assetManager.loadImage("GAME_COMPLETED_BG", "/sprites/game_completed.png");
+        
         soundManager.playBGM(10);
     }
 
@@ -378,18 +379,23 @@ public class GamePanel extends JPanel implements Runnable {
         if (isGameOver || isVictory) {
             hasSavedGame = false;
 
-            if (keyH.spacePressed) {
-                if (isVictory) {
+           if (keyH.spacePressed || keyH.enterPressed || keyH.escapePressed) {
+                if (isGameCompleted && isVictory) {
+                    // Nếu là phá đảo Map 3 -> Thoát về Menu chính với lựa chọn SELECT MAP
+                    returnToMainMenu();
+                    isGameCompleted = true; // Giữ trạng thái để Menu hiển thị nút SELECT MAP
+                } else if (isVictory) {
                     currentMapIndex++;
                     if (currentMapIndex >= mapList.length) {
                         currentMapIndex = 0;
                     }
+                    resetGame();
+                } else {
+                    // Game Over -> Chơi lại
+                    resetGame();
                 }
-                resetGame();
                 keyH.spacePressed = false;
-            }
-            if (keyH.escapePressed) {
-                returnToMainMenu();
+                keyH.enterPressed = false;
                 keyH.escapePressed = false;
             }
             return;
@@ -451,9 +457,6 @@ public class GamePanel extends JPanel implements Runnable {
                                 hasSavedGame = false;
                                 scoreBoard.insertScore(playerName, score);
 
-                                gameState = GameState.MENU;
-                                menuOption = 0; // Đặt con trỏ ở SELECT MAP
-                                soundManager.playBGM(10); // Bật nhạc Menu
                             }
                         }
                     }
@@ -615,6 +618,9 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (gameState == GameState.PAUSE && !isGameOver) {
                 uiManager.drawPauseScreen(g2, screenWidth, screenHeight, pauseOption);
+            }else if (isVictory && isGameCompleted) {
+                // Hiển thị màn hình Phá đảo đặc biệt có ảnh T1/Faker + Điểm số
+                uiManager.drawGameCompletedScreen(g2, assetManager.getSprite("GAME_COMPLETED_BG"), score, screenWidth, screenHeight);
             } else if (isGameOver || isVictory) {
                 uiManager.drawEndGameScreen(g2, screenWidth, screenHeight, score, isVictory);
             }

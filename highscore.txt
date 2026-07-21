@@ -116,6 +116,7 @@ Player,300
 qwer,300
 ko,300
 tuan,300
+4,300
 keria,500
 tuan,500
 tuan,400
@@ -126,6 +127,7 @@ tuan,400
 tuan,400
 tuan,400
 tuan,400
+4,400
 tuan,500
 tuan,500
 tuan,500
@@ -139,3 +141,5 @@ Player,900
 cho tuan,700
 tai,1400
 tai,1400
+4,1400
+Player,1400
