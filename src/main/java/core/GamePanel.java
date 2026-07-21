@@ -266,27 +266,31 @@ public class GamePanel extends JPanel implements Runnable {
         }
 
         if (gameState == GameState.MAP_SELECTION) {
-            if (keyH.leftPressed) {
-                soundManager.playSFX(3);
-                currentMapIndex--;
-                if (currentMapIndex < 0) {
-                    currentMapIndex = mapList.length - 1;
-                }
-                keyH.leftPressed = false;
-            }
             if (keyH.rightPressed) {
-                soundManager.playSFX(3);
                 currentMapIndex++;
-                if (currentMapIndex >= mapList.length) {
+                if (currentMapIndex > config.LevelManager.getUnlockedLevelIndex()) {
                     currentMapIndex = 0;
                 }
                 keyH.rightPressed = false;
             }
+
+            if (keyH.leftPressed) {
+                currentMapIndex--;
+                if (currentMapIndex < 0) {
+                    currentMapIndex = config.LevelManager.getUnlockedLevelIndex();
+                }
+                keyH.leftPressed = false;
+            }
+
             if (keyH.enterPressed) {
-                soundManager.playSFX(3);
-                String inputName = javax.swing.JOptionPane.showInputDialog(this, "Nhập tên người chơi:");
+                 soundManager.playSFX(3);
+                // Hiển thị hộp thoại yêu cầu nhập tên
+                  String inputName = javax.swing.JOptionPane.showInputDialog(this, "Nhập tên người chơi:");
                 playerName = (inputName != null && !inputName.trim().isEmpty()) ? inputName.trim() : "Player";
+
+                // Khởi tạo lại game và bắt đầu chơi
                 resetGame();
+                gameState = GameState.PLAYING;
                 keyH.enterPressed = false;
             }
             if (keyH.escapePressed) {
@@ -365,14 +369,14 @@ public class GamePanel extends JPanel implements Runnable {
                     }
                 } // Xử lý Cửa qua màn
                 else if (obj.getId() == IdObject.DOOR) {
+                    // Nếu cửa hiện ra và nhân vật chạm vào cửa
                     if (doorSpawned && cChecker.checkEntity(player.getHitbox(), obj.getHitbox())) {
                         isVictory = true;
-
                         soundManager.stopBGM();
-                        soundManager.playSFX(7); // Đã sửa nhẹ phát đúng SFX Victory (Index 7)
-
-                        playerLives++;
+                        soundManager.playSFX(7);
+                        // GỌI HÀM NÀY ĐỂ MỞ KHÓA MAP TIẾP THEO
                         config.LevelManager.unlockNextLevel(currentMapIndex);
+
                         if (currentMapIndex == mapList.length - 1) {
                             scoreBoard.insertScore(playerName, score);
                         }
@@ -440,17 +444,17 @@ public class GamePanel extends JPanel implements Runnable {
             if (keyH.escapePressed) {
                 scoreBoard.insertScore(playerName, score);
                 isVictory = false;
-                
+
                 // =========================================================================
                 // ĐÃ FIX BUG: Loại bỏ hoàn toàn dòng resetGame() dư thừa gây đè nhạc!
                 // =========================================================================
                 soundManager.stopBGM(); // Tắt nhạc Map đang chơi
-                
+
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
 
                 // Phát lại nhạc nền Menu
-                soundManager.playBGM(10); 
+                soundManager.playBGM(10);
             }
         }
     }
@@ -618,7 +622,7 @@ public class GamePanel extends JPanel implements Runnable {
                         if (assetManager.getSprite("BOSS_BOM") != null) {
                             g2.drawImage(assetManager.getSprite("BOSS_BOM"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
                         } else {
-                            obj.render(g2); 
+                            obj.render(g2);
                         }
                     } else {
                         // GIỮ NGUYÊN CODE VẼ BOM NGƯỜI CHƠI CỦA BẠN
