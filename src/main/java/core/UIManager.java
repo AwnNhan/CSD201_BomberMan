@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package core;
 
 import java.awt.Color;
@@ -10,22 +6,20 @@ import java.awt.FontMetrics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 
-/**
- *
- * @author Admin
- */
 public class UIManager {
 
-    private final Font titleFont = new Font("Arial", Font.BOLD, 48);
-    private final Font menuFont = new Font("Arial", Font.BOLD, 26);
+    private final Font titleFont = new Font("Arial", Font.BOLD, 42);
+    private final Font menuFont = new Font("Arial", Font.BOLD, 22);
     private final Font subTitleFont = new Font("Arial", Font.BOLD, 36);
     private final Font regularFont = new Font("Arial", Font.PLAIN, 20);
     private final Font hudFont = new Font("Arial", Font.BOLD, 24);
     private final Font italicFont = new Font("Arial", Font.ITALIC, 16);
     private final Font largeFont = new Font("Arial", Font.BOLD, 50);
     private final Font mediumFont = new Font("Arial", Font.BOLD, 30);
+
     private int tutorialPage = 0;
     private final int maxTutorialPage = 3;
+
     private Image tutorialGif1;
     private Image tutorialGif2;
     private Image tutorialGif3;
@@ -60,31 +54,63 @@ public class UIManager {
     }
 
     // =========================================================================
-    // 1. VẼ MÀN HÌNH MENU CHÍNH
+    // 1. VẼ MÀN HÌNH MENU CHÍNH (ĐÃ ĐỒNG BỘ DYNAMIC MENU THAM SỐ MỚI)
     // =========================================================================
-    public void drawMenu(Graphics2D g2, int menuOption, int screenWidth, int screenHeight) {
+    public void drawMenu(Graphics2D g2, int menuOption, int screenWidth, int screenHeight, boolean hasSavedGame, boolean isGameCompleted) {
+        // --- NỀN MENU XÁM TỐI GIỐNG HÌNH GỐC CỦA BẠN ---
         g2.setColor(new Color(20, 20, 30));
         g2.fillRect(0, 0, screenWidth, screenHeight);
 
+        // --- TIÊU ĐỀ: BOMBERMAN CSD201 ---
         g2.setFont(titleFont);
-        g2.setColor(Color.YELLOW);
-        g2.drawString("BOMBERMAN CSD201", screenWidth / 2 - 250, 120);
+        String titleText = "BOMBERMAN CSD201";
+        int titleX = getXforCenteredText(g2, titleText, screenWidth);
+        int titleY = 160;
 
-        String[] options = {"START GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD", "QUIT"};
+        // Vẽ bóng xám phía sau chữ tiêu đề
+        g2.setColor(new Color(60, 60, 60));
+        g2.drawString(titleText, titleX + 3, titleY + 3);
+        // Chữ vàng chính
+        g2.setColor(Color.YELLOW);
+        g2.drawString(titleText, titleX, titleY);
+
+        // --- DANH SÁCH CÁC TÙY CHỌN MENU THEO TRẠNG THÁI ---
+        String[] options;
+        if (hasSavedGame) {
+            // Khi đang chơi dở và Pause ra Main Menu
+            options = new String[]{"CONTINUE GAME", "NEW GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD", "QUIT"};
+        } else if (isGameCompleted) {
+            // Khi đã thắng Map 3 phá đảo Game
+            options = new String[]{"SELECT MAP", "NEW GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD", "QUIT"};
+        } else {
+            // Mặc định ban đầu
+            options = new String[]{"START GAME", "TUTORIAL", "ABOUT US", "LEADERBOARD", "QUIT"};
+        }
+
         g2.setFont(menuFont);
+        int startY = 260;
+
         for (int i = 0; i < options.length; i++) {
+            String optionText = options[i];
+            int optionX = getXforCenteredText(g2, optionText, screenWidth);
+            int optionY = startY + (i * 42);
+
             if (i == menuOption) {
+                // Mục đang chọn hiển thị màu xanh cyan nhẹ và thêm hai dấu > <
                 g2.setColor(Color.CYAN);
-                g2.drawString("> " + options[i] + " <", screenWidth / 2 - 120, 240 + (i * 60));
+                g2.drawString("> " + optionText + " <", optionX - 25, optionY);
             } else {
                 g2.setColor(Color.WHITE);
-                g2.drawString(options[i], screenWidth / 2 - 90, 240 + (i * 60));
+                g2.drawString(optionText, optionX, optionY);
             }
         }
 
-        g2.setFont(regularFont);
+        // --- DÒNG HƯỚNG DẪN MÀU ĐỎ BÊN DƯỚI CÙNG ---
         g2.setColor(Color.RED);
-        g2.drawString("Use W/S to Navigate | Press ENTER to Select | Press ESC to Exit", screenWidth / 2 - 270, screenHeight - 50);
+        g2.setFont(new Font("Arial", Font.BOLD, 15));
+        String hintText = "Use W/S to Navigate | Press ENTER to Select | Press ESC to Exit";
+        int hintX = getXforCenteredText(g2, hintText, screenWidth);
+        g2.drawString(hintText, hintX, screenHeight - 60);
     }
 
     // =========================================================================
@@ -96,7 +122,7 @@ public class UIManager {
 
         g2.setColor(Color.YELLOW);
         g2.setFont(titleFont);
-        g2.drawString("SELECT MAP", screenWidth / 2 - 150, 150);
+        g2.drawString("SELECT MAP", screenWidth / 2 - 140, 150);
 
         g2.setColor(Color.CYAN);
         g2.setFont(subTitleFont);
@@ -123,7 +149,6 @@ public class UIManager {
 
         g2.setFont(regularFont);
 
-        // --- CẤU HÌNH TỌA ĐỘ TỰ ĐỘNG ---
         int gifWidth = 280;
         int gifHeight = 210;
         int gifX = (screenWidth - gifWidth) / 2;
@@ -268,16 +293,42 @@ public class UIManager {
     // =========================================================================
     // 7. VẼ MÀN HÌNH TẠM DỪNG (PAUSE SCREEN)
     // =========================================================================
-    public void drawPauseScreen(Graphics2D g2, int screenWidth, int screenHeight) {
+    public void drawPauseScreen(Graphics2D g2, int screenWidth, int screenHeight, int pauseOption) {
         g2.setColor(new Color(0, 0, 0, 150));
         g2.fillRect(0, 0, screenWidth, screenHeight);
 
-        g2.setColor(Color.WHITE);
-        g2.setFont(mediumFont);
-        g2.drawString("GAME PAUSED", screenWidth / 2 - 100, screenHeight / 2);
+        g2.setFont(g2.getFont().deriveFont(Font.BOLD, 40F));
+        String text = "PAUSED";
+        int x = getXforCenteredText(g2, text, screenWidth);
+        int y = screenHeight / 4 + 20;
 
-        g2.setFont(regularFont);
-        g2.drawString("Press ESC to go back to the menu or P to continue", screenWidth / 2 - 230, screenHeight / 2 + 40);
+        g2.setColor(Color.GRAY);
+        g2.drawString(text, x + 3, y + 3);
+        g2.setColor(Color.WHITE);
+        g2.drawString(text, x, y);
+
+        g2.setFont(g2.getFont().deriveFont(Font.BOLD, 22F));
+        String[] options = {"CONTINUE", "NEW GAME", "MAIN MENU"};
+        int startY = screenHeight / 2 - 10;
+
+        for (int i = 0; i < options.length; i++) {
+            String optionText = options[i];
+            int optionX = getXforCenteredText(g2, optionText, screenWidth);
+            int optionY = startY + (i * 45);
+
+            if (i == pauseOption) {
+                g2.setColor(Color.YELLOW);
+                g2.drawString("> " + optionText + " <", optionX - 25, optionY);
+            } else {
+                g2.setColor(Color.WHITE);
+                g2.drawString(optionText, optionX, optionY);
+            }
+        }
+    }
+
+    private int getXforCenteredText(Graphics2D g2, String text, int screenWidth) {
+        int length = (int) g2.getFontMetrics().getStringBounds(text, g2).getWidth();
+        return screenWidth / 2 - length / 2;
     }
 
     // =========================================================================
@@ -301,12 +352,11 @@ public class UIManager {
     }
 
     // =========================================================================
-    // HÀM BỔ TRỢ: VẼ NÚT QUAY LẠI (DÙNG CHUNG CHO TUTORIAL, ABOUT US, LEADERBOARD)
+    // HÀM BỔ TRỢ: VẼ NÚT QUAY LẠI
     // =========================================================================
     private void drawBackButtonHint(Graphics2D g2, int screenHeight) {
         g2.setFont(italicFont);
         g2.setColor(Color.ORANGE);
         g2.drawString("<- Press ESC to Return Menu", 40, screenHeight - 50);
     }
-
 }
