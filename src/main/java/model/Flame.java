@@ -83,10 +83,20 @@ public class Flame extends GameObject {
         if (alpha > 1) alpha = 1;
         g2.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, alpha));
 
-        int x = (int) getX();
-        int y = (int) getY();
-        int w = getWidth();
-        int h = getHeight();
+        // =========================================================================
+        // THU NHỎ TẦM HIỂN THỊ CỦA LỬA (PADDING & SCALE)
+        // =========================================================================
+        // Chỉnh scaleRatio: 0.82f nghĩa là lửa bằng 82% kích thước ô (giảm ~18%)
+        float scaleRatio = 0.82f; 
+
+        int rawW = getWidth();
+        int rawH = getHeight();
+
+        // Tính kích thước thu nhỏ và căn vào chính giữa ô
+        int w = (int) (rawW * scaleRatio);
+        int h = (int) (rawH * scaleRatio);
+        int x = (int) getX() + (rawW - w) / 2;
+        int y = (int) getY() + (rawH - h) / 2;
 
         if ("CENTER".equals(type)) {
             // =================================================================
