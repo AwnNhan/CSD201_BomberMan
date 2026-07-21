@@ -107,6 +107,9 @@ tuan,500
 tuan,400
 tuan,400
 tuan,400
+tuan,400
+tuan,500
+tuan,500
 tuan,500
 tuan,500
 tuan,500

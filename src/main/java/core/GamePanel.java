@@ -11,6 +11,7 @@ import java.awt.Graphics2D;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 import map.MapManager;
 import model.Bomb;
@@ -52,6 +53,8 @@ public class GamePanel extends JPanel implements Runnable {
 
     public int score = 0;
     public int playerLives = 3;
+    public int checkpointScore = 0;
+    public int checkpointLives = 3;
     private long invincibleUntil = 0;
 
     public String[] mapList = {"Map 1 (Default)", "Map 2 (Smart Enemy)", "Map 3 (Boss)"};
@@ -147,10 +150,19 @@ public class GamePanel extends JPanel implements Runnable {
         bombManager.reset();
         doorSpawned = false;
 
-        if (!isVictory) {
+        // --- LOGIC PHỤC HỒI ĐIỂM SỐ & MẠNG SỐNG (CHECKPOINT) ---
+        if (isGameOver) {
+            // Trường hợp 1: Bị Game Over và chọn chơi lại -> Phục hồi mốc đầu màn
+            playerLives = checkpointLives;
+            score = checkpointScore;
+        } else if (!isVictory) {
+            // Trường hợp 2: Bắt đầu mới hoàn toàn (ESC ra Menu/New Game) -> Reset về mặc định
             playerLives = 3;
             score = 0;
+            checkpointLives = 3;
+            checkpointScore = 0;
         }
+
         isGameOver = false;
         isVictory = false;
 
@@ -255,7 +267,7 @@ public class GamePanel extends JPanel implements Runnable {
             return;
         }
 
-        // Tách riêng kiểm tra cho ABOUT_US và LEADERBOARD (Vì TUTORIAL đã được tách ra ở trên)
+        // Tách riêng kiểm tra cho ABOUT_US và LEADERBOARD
         if (gameState == GameState.ABOUT_US || gameState == GameState.LEADERBOARD) {
             if (keyH.escapePressed) {
                 soundManager.playSFX(3);
@@ -267,6 +279,7 @@ public class GamePanel extends JPanel implements Runnable {
 
         if (gameState == GameState.MAP_SELECTION) {
             if (keyH.rightPressed) {
+                soundManager.playSFX(3);
                 currentMapIndex++;
                 if (currentMapIndex > config.LevelManager.getUnlockedLevelIndex()) {
                     currentMapIndex = 0;
@@ -275,6 +288,7 @@ public class GamePanel extends JPanel implements Runnable {
             }
 
             if (keyH.leftPressed) {
+                soundManager.playSFX(3);
                 currentMapIndex--;
                 if (currentMapIndex < 0) {
                     currentMapIndex = config.LevelManager.getUnlockedLevelIndex();
@@ -283,14 +297,13 @@ public class GamePanel extends JPanel implements Runnable {
             }
 
             if (keyH.enterPressed) {
-                 soundManager.playSFX(3);
+                soundManager.playSFX(3);
                 // Hiển thị hộp thoại yêu cầu nhập tên
-                  String inputName = javax.swing.JOptionPane.showInputDialog(this, "Nhập tên người chơi:");
+                String inputName = JOptionPane.showInputDialog(this, "Nhập tên người chơi:");
                 playerName = (inputName != null && !inputName.trim().isEmpty()) ? inputName.trim() : "Player";
 
-                // Khởi tạo lại game và bắt đầu chơi
+                // Reset game và chuyển sang trạng thái PLAYING
                 resetGame();
-                gameState = GameState.PLAYING;
                 keyH.enterPressed = false;
             }
             if (keyH.escapePressed) {
@@ -318,9 +331,7 @@ public class GamePanel extends JPanel implements Runnable {
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
 
-                // =========================================================================
-                // PHÁT LẠI NHẠC MENU KHI THOÁT TỪ MÀN HÌNH KẾT THÚC (WIN/LOSE) VỀ MENU CHÍNH
-                // =========================================================================
+                // Phát lại nhạc nền Menu khi thoát về Menu chính
                 soundManager.playBGM(10);
             }
             return;
@@ -329,15 +340,12 @@ public class GamePanel extends JPanel implements Runnable {
         // --- LOGIC TRONG TRẬN ĐẤU CHÍNH THỨC ---
         if (gameState == GameState.PLAYING) {
             // 1. Giao việc quản lý đặt bom cho BombManager
-
             bombManager.handlePlacingBomb(player, keyH);
             bombManager.updateBombs();
 
             int[][] mapWithBombs = bombManager.generateMapWithBombs();
 
-            // =================================================================
-            // 4. VÒNG LẶP UPDATE THẦN THÁNH: O(1) CHO MỌI THAO TÁC XÓA
-            // =================================================================
+            // 2. VÒNG LẶP UPDATE THẦN THÁNH
             CustomLinkedList.Node current = objectList.head;
             int enemyCount = 0;
             boolean invincible = System.currentTimeMillis() < invincibleUntil;
@@ -367,21 +375,32 @@ public class GamePanel extends JPanel implements Runnable {
                     if (!invincible && cChecker.checkEntity(player.getHitbox(), obj.getHitbox())) {
                         killPlayer();
                     }
-                } // Xử lý Cửa qua màn
+                } 
+                // Xử lý Cửa qua màn
                 else if (obj.getId() == IdObject.DOOR) {
-                    // Nếu cửa hiện ra và nhân vật chạm vào cửa
                     if (doorSpawned && cChecker.checkEntity(player.getHitbox(), obj.getHitbox())) {
-                        isVictory = true;
-                        soundManager.stopBGM();
-                        soundManager.playSFX(7);
-                        // GỌI HÀM NÀY ĐỂ MỞ KHÓA MAP TIẾP THEO
-                        config.LevelManager.unlockNextLevel(currentMapIndex);
+                        if (!isVictory) { // Đảm bảo chỉ kích hoạt chiến thắng và phát nhạc 1 lần
+                            isVictory = true;
 
-                        if (currentMapIndex == mapList.length - 1) {
-                            scoreBoard.insertScore(playerName, score);
+                            // Tắt nhạc nền và phát hiệu ứng chiến thắng (Victory - Index 7)
+                            soundManager.stopBGM();
+                            soundManager.playSFX(7);
+
+                            // Thưởng thêm 1 mạng + cập nhật mốc Checkpoint
+                            playerLives++;
+                            checkpointLives = playerLives;
+                            checkpointScore = score;
+
+                            // Mở khóa màn tiếp theo
+                            config.LevelManager.unlockNextLevel(currentMapIndex);
+
+                            if (currentMapIndex == mapList.length - 1) {
+                                scoreBoard.insertScore(playerName, score);
+                            }
                         }
                     }
-                } // Xử lý Lửa nổ (Flame) gây sát thương O(1)
+                } 
+                // Xử lý Lửa nổ (Flame)
                 else if (obj.getId() == IdObject.FLAME) {
                     Flame f = (Flame) obj;
                     if (f.isExpired()) {
@@ -445,11 +464,7 @@ public class GamePanel extends JPanel implements Runnable {
                 scoreBoard.insertScore(playerName, score);
                 isVictory = false;
 
-                // =========================================================================
-                // ĐÃ FIX BUG: Loại bỏ hoàn toàn dòng resetGame() dư thừa gây đè nhạc!
-                // =========================================================================
                 soundManager.stopBGM(); // Tắt nhạc Map đang chơi
-
                 gameState = GameState.MENU;
                 keyH.escapePressed = false;
 
@@ -474,6 +489,7 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
+    @Override
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g;
@@ -500,18 +516,10 @@ public class GamePanel extends JPanel implements Runnable {
                 int mapPixelWidth = mapM.getMaxCol() * tileSize;
                 int mapPixelHeight = mapM.getMaxRow() * tileSize;
 
-                if (cameraX < 0) {
-                    cameraX = 0;
-                }
-                if (cameraY < 0) {
-                    cameraY = 0;
-                }
-                if (cameraX > mapPixelWidth - screenWidth) {
-                    cameraX = mapPixelWidth - screenWidth;
-                }
-                if (cameraY > mapPixelHeight - screenHeight) {
-                    cameraY = mapPixelHeight - screenHeight;
-                }
+                if (cameraX < 0) cameraX = 0;
+                if (cameraY < 0) cameraY = 0;
+                if (cameraX > mapPixelWidth - screenWidth) cameraX = mapPixelWidth - screenWidth;
+                if (cameraY > mapPixelHeight - screenHeight) cameraY = mapPixelHeight - screenHeight;
             }
 
             g2.translate(-cameraX, -cameraY);
@@ -539,7 +547,7 @@ public class GamePanel extends JPanel implements Runnable {
         g2.dispose();
     }
 
-    // Phương thức vẽ chi tiết các thực thể (Đã gộp từ 2 phiên bản cũ)
+    // Phương thức vẽ chi tiết các thực thể
     private void renderGameObjects(Graphics2D g2) {
         CustomLinkedList.Node current = objectList.head;
         while (current != null) {
@@ -618,14 +626,12 @@ public class GamePanel extends JPanel implements Runnable {
 
                 if (shouldDraw) {
                     if (b.isBossBomb()) {
-                        // VẼ BOM CỦA BOSS BẰNG HÌNH ẢNH
                         if (assetManager.getSprite("BOSS_BOM") != null) {
                             g2.drawImage(assetManager.getSprite("BOSS_BOM"), (int) obj.getX(), (int) obj.getY(), tileSize, tileSize, null);
                         } else {
                             obj.render(g2);
                         }
                     } else {
-                        // GIỮ NGUYÊN CODE VẼ BOM NGƯỜI CHƠI CỦA BẠN
                         if (assetManager.getSprite("BOMB_COOL") != null) {
                             int bombHeight = (int) (tileSize * 1.2);
                             g2.drawImage(assetManager.getSprite("BOMB_COOL"), (int) obj.getX(), (int) obj.getY() - (bombHeight - tileSize) + 6, tileSize, bombHeight, null);
