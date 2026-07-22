@@ -128,7 +128,6 @@ Player,300
 qwer,300
 ko,300
 tuan,300
-4,300
 keria,500
 tuan,500
 tuan,400

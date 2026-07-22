@@ -102,8 +102,7 @@ public class GamePanel extends JPanel implements Runnable {
         assetManager.loadImage("BOSS_RIGHT", "/sprites/boss_right.png");
         assetManager.loadImage("BOSS_UP", "/sprites/boss_up.png");
         assetManager.loadImage("BOSS_BOM", "/sprites/boss_bom.png");
-        assetManager.loadImage("GAME_COMPLETED_BG", "/sprites/game_completed.png");
-        
+
         soundManager.playBGM(10);
     }
 
