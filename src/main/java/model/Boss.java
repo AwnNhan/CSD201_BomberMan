@@ -7,6 +7,7 @@ import algorithm.PathFinder;
 import core.AssetManager;
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -26,19 +27,18 @@ public class Boss extends GameObject {
     private String direction = "DOWN";
     private long lastSkillTime = 0;
     private AssetManager assetManager;
-    // Biến tạo thời gian bất tử cho Boss (tránh 1 ngọn lửa trừ máu liên tục 60 lần/giây)
     private long invincibleUntil = 0;
 
-    // Thêm các biến để đi Random khi bị kẹt
     private int currentDir = -1;
+    
+    // Padding thu nhỏ hitbox ôm sát thân Boss (Thụt lùi 12px mỗi bên)
+    private final int padding = 12;
 
     public Boss(double startX, double startY, int customSpeed, AssetManager assetManager) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.ENEMY);
         this.speed = customSpeed + 1.0; // Boss di chuyển nhanh
         this.pathFinder = new PathFinder();
         this.assetManager = assetManager;
-        // MỚI: Thiết lập để 8 giây sau khi sinh ra mới ném bom lần đầu (Cooldown là 15s)
-        // Hệ thống sẽ lấy Hiện tại trừ đi 7 giây -> Mất thêm 8 giây nữa mới đủ 15 giây để kích hoạt.
         this.lastSkillTime = System.currentTimeMillis() - 7000;
     }
 
@@ -49,10 +49,9 @@ public class Boss extends GameObject {
 
     public void takeDamage() {
         long currentTime = System.currentTimeMillis();
-        // Chỉ trừ máu nếu thời gian hiện tại đã vượt qua thời gian bất tử
         if (currentTime > invincibleUntil) {
             this.hp--;
-            invincibleUntil = currentTime + 1000; // Cho Boss bất tử 1 giây (1000ms) sau khi dính bom
+            invincibleUntil = currentTime + 1000; // Cho Boss bất tử 1s sau khi dính đòn
             System.out.println("Boss trúng bom! Máu còn: " + this.hp);
         }
     }
@@ -68,28 +67,23 @@ public class Boss extends GameObject {
     // Boss chọi 2 quả bom gần người chơi
     public void castSkill(MinHeapQueue bombQueue, CustomLinkedList objectList, int maxCol, int maxRow) {
         long currentTime = System.currentTimeMillis();
-        // Cứ 15 giây Boss ném bom 1 lần
         if (currentTime - lastSkillTime > 15000 && targetPos != null) {
 
             int bombsThrown = 0;
             int attempts = 0;
 
-            // Thử tối đa 15 lần để tìm ra 2 ô trống ném bom (Giảm xuống còn 2 quả)
             while (bombsThrown < 2 && attempts < 15) {
                 attempts++;
 
-                // Tính tọa độ ngẫu nhiên gần người chơi (cách từ -2 đến 2 ô)
                 int offsetC = random.nextInt(5) - 2;
                 int offsetR = random.nextInt(5) - 2;
 
                 int targetC = targetPos.c + offsetC;
                 int targetR = targetPos.r + offsetR;
 
-                // Đảm bảo không văng ra khỏi map
                 if (targetC >= 0 && targetC < maxCol && targetR >= 0 && targetR < maxRow) {
-                    if (currentMap[targetR][targetC] == 0) { // Chỉ ném vào ô trống
+                    if (currentMap[targetR][targetC] == 0) {
 
-                        // Kiểm tra xem chỗ đó có bom chưa
                         boolean hasBombHere = false;
                         CustomLinkedList.Node temp = objectList.head;
                         while (temp != null) {
@@ -112,7 +106,7 @@ public class Boss extends GameObject {
                     }
                 }
             }
-            lastSkillTime = currentTime; // Reset lại hồi chiêu 15s
+            lastSkillTime = currentTime;
         }
     }
 
@@ -126,7 +120,6 @@ public class Boss extends GameObject {
             GridPoint myPos = new GridPoint((int) (this.Y / TILE_SIZE), (int) (this.X / TILE_SIZE));
             currentPath = pathFinder.bfsSearch(myPos, targetPos, currentMap);
 
-            // LOGIC CHỮA CHÁY: Nếu không có đường tới người chơi (bị kẹt tường)
             if (currentPath == null || currentPath.isEmpty()) {
                 List<Integer> validDirs = getValidDirections();
                 if (!validDirs.isEmpty()) {
@@ -173,8 +166,7 @@ public class Boss extends GameObject {
             }
             this.setX(nextX);
             this.setY(nextY);
-        } // 2. NẾU KHÔNG CÓ ĐƯỜNG, ĐI RANDOM
-        else if (currentDir != -1) {
+        } else if (currentDir != -1) {
             if (currentDir == 0) {
                 this.setY(this.Y - speed);
                 direction = "UP";
@@ -188,6 +180,14 @@ public class Boss extends GameObject {
                 this.setX(this.X + speed);
                 direction = "RIGHT";
             }
+        }
+
+        // ĐỒNG BỘ LẠI HITBOX THU NHỎ CỦA BOSS DÀNH CHO XỬ LÝ VA CHẠM
+        if (this.hitbox != null) {
+            this.hitbox.x = (int) this.X + padding;
+            this.hitbox.y = (int) this.Y + padding;
+            this.hitbox.width = getWidth() - (padding * 2);
+            this.hitbox.height = getHeight() - (padding * 2);
         }
 
         return true;
@@ -241,28 +241,26 @@ public class Boss extends GameObject {
             }
         }
 
-        // 2. GIỮ NGUYÊN DÒNG CODE NHẤP NHÁY MÀU TRẮNG
+        // 2. NHẤP NHÁY TRẮNG KHI TRÚNG ĐÒN
         if (System.currentTimeMillis() < invincibleUntil && (System.currentTimeMillis() / 100 % 2 == 0)) {
             g.setColor(Color.WHITE);
             g.fillRect(x, y, w, h);
         }
+
         // Vẽ thanh máu (HP)
         g.setColor(Color.RED);
         g.fillRect((int) getX(), (int) getY() - 10, TILE_SIZE, 5);
         g.setColor(Color.GREEN);
 
-        // Sửa công thức vẽ thanh máu xanh dựa trên maxHp
         g.fillRect((int) getX(), (int) getY() - 10, (int) (TILE_SIZE * ((double) this.hp / maxHp)), 5);
 
         return true;
     }
 
     @Override
-    public java.awt.Rectangle getHitbox() {
-        // Thu nhỏ hitbox lại mỗi bên 6 pixel (Tổng cộng thu hẹp 12px chiều rộng và chiều cao)
-        int padding = 6;
-
-        return new java.awt.Rectangle(
+    public Rectangle getHitbox() {
+        // Thu nhỏ hitbox lại mỗi bên 12 pixel (Chiểu rộng & cao còn 24px)
+        return new Rectangle(
                 (int) this.X + padding,
                 (int) this.Y + padding,
                 this.width - (padding * 2),

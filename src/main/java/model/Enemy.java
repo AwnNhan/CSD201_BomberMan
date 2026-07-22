@@ -2,6 +2,7 @@ package model;
 
 import java.awt.Color;
 import java.awt.Graphics;
+import java.awt.Rectangle;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -15,10 +16,13 @@ public class Enemy extends GameObject {
     protected static final int TILE_SIZE = 48;
     protected int[][] currentMap;
     protected Random random = new Random();
-    
+
     // Tọa độ mục tiêu (Player) để dành cho AI nâng cao (SmartEnemy, Boss)
-    protected int targetR = -1; 
-    protected int targetC = -1; 
+    protected int targetR = -1;
+    protected int targetC = -1;
+
+    // Margin thu nhỏ hitbox ôm sát thân nhân vật (né góc chéo bị chết oan)
+    protected int margin = 10;
 
     // Constructor 1: Mặc định (2 tham số)
     public Enemy(double startX, double startY) {
@@ -42,7 +46,9 @@ public class Enemy extends GameObject {
 
     @Override
     public boolean update() {
-        if (currentMap == null) return true;
+        if (currentMap == null) {
+            return true;
+        }
 
         // Chỉ đưa ra quyết định chuyển hướng khi Quái vật nằm VỪA KHÍT trong 1 ô vuông lưới
         if ((int) this.X % TILE_SIZE == 0 && (int) this.Y % TILE_SIZE == 0) {
@@ -74,7 +80,26 @@ public class Enemy extends GameObject {
             direction = "RIGHT";
         }
 
-        return true; 
+        // ĐỒNG BỘ HITBOX THU NHỎ DÀNH CHO CẢ SMARTENEMY & ENEMY THƯỜNG
+        if (this.hitbox != null) {
+            this.hitbox.x = (int) this.X + margin;
+            this.hitbox.y = (int) this.Y + margin;
+            this.hitbox.width = getWidth() - (2 * margin);
+            this.hitbox.height = getHeight() - (2 * margin);
+        }
+
+        return true;
+    }
+
+    // GHI ĐÈ HÀM getHitbox() ĐỂ TRẢ VỀ RỜI KHỎI KHUNG KÍCH THƯỚC BỨC ẢNH
+    @Override
+    public Rectangle getHitbox() {
+        return new Rectangle(
+                (int) this.X + margin,
+                (int) this.Y + margin,
+                getWidth() - (2 * margin),
+                getHeight() - (2 * margin)
+        );
     }
 
     // Hàm check 4 hướng bao quanh, nếu là ô trống (số 0) thì quái mới được đi vào

@@ -18,6 +18,8 @@ public class Player extends GameObject {
     private double speed;
 
     private static final int TILE_SIZE = 48;
+    // Cấu hình viền hitbox thu nhỏ để né đòn & di chuyển mượt hơn
+    private final int margin = 10; 
 
     public Player(double startX, double startY, KeyHandler keyH, CollisionChecker cChecker) {
         super(startX, startY, TILE_SIZE, TILE_SIZE, IdObject.PLAYER);
@@ -57,13 +59,10 @@ public class Player extends GameObject {
             movingX = true;
         }
 
-        // Cấu hình viền hitbox thu nhỏ để di chuyển mượt hơn
-        int margin = 10;
         int assistThreshold = 18;
 
         // Tạo Hitbox HIỆN TẠI phục vụ việc kiểm tra trạng thái thoát khỏi quả bom vừa đặt
-        Rectangle currentHitbox = new Rectangle((int) getX() + margin, (int) getY() + margin,
-                getWidth() - 2 * margin, getHeight() - 2 * margin);
+        Rectangle currentHitbox = getHitbox();
 
         // =====================================================================
         // XỬ LÝ DI CHUYỂN TRÊN TRỤC X
@@ -135,11 +134,26 @@ public class Player extends GameObject {
             }
         }
 
-        // Đồng bộ lại vị trí hitbox chính xác của lớp cha GameObject để quét sát thương
-        this.hitbox.x = (int) this.X;
-        this.hitbox.y = (int) this.Y;
+        // ĐỒNG BỘ LẠI HITBOX THU NHỎ (Thụt vào margin=10px mỗi bên)
+        if (this.hitbox != null) {
+            this.hitbox.x = (int) this.X + margin;
+            this.hitbox.y = (int) this.Y + margin;
+            this.hitbox.width = getWidth() - (2 * margin);
+            this.hitbox.height = getHeight() - (2 * margin);
+        }
 
         return true;
+    }
+
+    // OVERRIDE HÀM LẤY HITBOX ĐỂ ĐẢM BẢO CollisionChecker CŨNG DÙNG HITBOX THU NHỎ NÀY
+    @Override
+    public Rectangle getHitbox() {
+        return new Rectangle(
+            (int) this.X + margin, 
+            (int) this.Y + margin, 
+            getWidth() - (2 * margin), 
+            getHeight() - (2 * margin)
+        );
     }
 
     @Override

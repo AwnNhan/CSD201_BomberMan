@@ -132,13 +132,15 @@ public class GamePanel extends JPanel implements Runnable {
         }
     }
 
-    // Tạo game mới bắt đầu từ Map 1: Nhập tên -> Khởi tạo Map 1 -> Chơi luôn
+    // Khi nhấn NEW GAME: Reset hoàn toàn về Map 1 và xóa cờ phá đảo cũ
     private void startNewGameFromBeginning() {
         hasSavedGame = false;
-        String inputName = JOptionPane.showInputDialog(this, "Nhập tên người chơi:");
+        isGameCompleted = false; // Reset cờ phá đảo khi chơi tài khoản mới
+
+        String inputName = JOptionPane.showInputDialog(this, "Nhập tên người chơi mới:");
         playerName = (inputName != null && !inputName.trim().isEmpty()) ? inputName.trim() : "Player";
 
-        currentMapIndex = 0; // Mặc định bắt đầu từ Map 1
+        currentMapIndex = 0; // Bắt đầu lại từ Map 1
         resetGame();
     }
 
@@ -182,19 +184,14 @@ public class GamePanel extends JPanel implements Runnable {
         int currentLevel = currentConfig.getLevelNumber();
         int halfCol = mapCols / 2;
 
-        // Quét bản đồ để tìm ô trống
         for (int r = 0; r < mapRows; r++) {
             for (int c = 0; c < mapCols; c++) {
                 if (matrix[r][c] == 0) {
-                    
-                    // NẾU LÀ MÀN BOSS: Chỉ lấy các ô trống ở nửa BÊN PHẢI bản đồ
                     if (currentLevel >= 3) {
                         if (c >= halfCol) {
                             emptyTiles.add(new int[]{r, c});
                         }
-                    } 
-                    // NẾU LÀ MÀN QUÁI THƯỜNG: Lấy ngẫu nhiên, chỉ né khu vực an toàn của Player (Góc trái trên)
-                    else {
+                    } else {
                         if (r > 3 || c > 3) {
                             emptyTiles.add(new int[]{r, c});
                         }
@@ -228,13 +225,19 @@ public class GamePanel extends JPanel implements Runnable {
         gameState = GameState.PLAYING;
     }
 
-    // Hàm lưu trận đấu dở dang và thoát về Menu chính
+    // Hàm thoát về Menu chính
     private void returnToMainMenu() {
         scoreBoard.insertScore(playerName, score);
-        isVictory = false;
         soundManager.stopBGM();
 
-        hasSavedGame = true; // Đánh dấu có game lưu dở
+        // CHỈ BẬT hasSavedGame NẾU CHƯA PHÁ ĐẢO VÀ CHƯA GAME OVER
+        if (!isGameCompleted && !isGameOver) {
+            hasSavedGame = true;
+        } else {
+            hasSavedGame = false;
+        }
+
+        isVictory = false;
         gameState = GameState.MENU;
         menuOption = 0;
 
@@ -246,11 +249,16 @@ public class GamePanel extends JPanel implements Runnable {
         // --- LOGIC MENU CHÍNH ---
         if (gameState == GameState.MENU) {
             int maxMenuOption;
-            if (hasSavedGame) {
-                maxMenuOption = 5; // CONTINUE GAME, NEW GAME, TUTORIAL, ABOUT US, LEADERBOARD, QUIT
-            } else if (isGameCompleted) {
+            // ƯU TIÊN 1: Nếu đã phá đảo Map 3 -> LUÔN HIỆN SELECT MAP
+            if (isGameCompleted) {
                 maxMenuOption = 5; // SELECT MAP, NEW GAME, TUTORIAL, ABOUT US, LEADERBOARD, QUIT
-            } else {
+            } 
+            // ƯU TIÊN 2: Nếu chưa phá đảo nhưng đang chơi dở -> HIỆN CONTINUE GAME
+            else if (hasSavedGame) {
+                maxMenuOption = 5; // CONTINUE GAME, NEW GAME, TUTORIAL, ABOUT US, LEADERBOARD, QUIT
+            } 
+            // ƯU TIÊN 3: Mới mở game -> HIỆN START GAME
+            else {
                 maxMenuOption = 4; // START GAME, TUTORIAL, ABOUT US, LEADERBOARD, QUIT
             }
 
@@ -270,38 +278,30 @@ public class GamePanel extends JPanel implements Runnable {
             if (keyH.enterPressed) {
                 soundManager.playSFX(3);
 
-                if (hasSavedGame) {
-                    // Trạng thái 1: Đang có game lưu dở
+                if (isGameCompleted) {
                     if (menuOption == 0) {
-                        // CONTINUE GAME -> Quay lại trận cũ
-                        gameState = GameState.PLAYING;
-                        soundManager.changeTheme(currentMapIndex);
+                        gameState = GameState.MAP_SELECTION; // SELECT MAP
                     } else if (menuOption == 1) {
-                        // NEW GAME -> Bỏ trận cũ, hỏi tên & vào thẳng Map 1
-                        startNewGameFromBeginning();
+                        startNewGameFromBeginning(); // NEW GAME
                     } else if (menuOption == 2) gameState = GameState.TUTORIAL;
                     else if (menuOption == 3) gameState = GameState.ABOUT_US;
                     else if (menuOption == 4) gameState = GameState.LEADERBOARD;
                     else if (menuOption == 5) System.exit(0);
 
-                } else if (isGameCompleted) {
-                    // Trạng thái 2: Đã hoàn thành xong Map 3
+                } else if (hasSavedGame) {
                     if (menuOption == 0) {
-                        // SELECT MAP -> Vào màn chọn tự do 3 Map
-                        gameState = GameState.MAP_SELECTION;
+                        gameState = GameState.PLAYING; // CONTINUE GAME
+                        soundManager.changeTheme(currentMapIndex);
                     } else if (menuOption == 1) {
-                        // NEW GAME -> Tạo tài khoản mới & vào thẳng Map 1
-                        startNewGameFromBeginning();
+                        startNewGameFromBeginning(); // NEW GAME
                     } else if (menuOption == 2) gameState = GameState.TUTORIAL;
                     else if (menuOption == 3) gameState = GameState.ABOUT_US;
                     else if (menuOption == 4) gameState = GameState.LEADERBOARD;
                     else if (menuOption == 5) System.exit(0);
 
                 } else {
-                    // Trạng thái 3: Mới mở game lần đầu
                     if (menuOption == 0) {
-                        // START GAME -> Nhập tên & vào thẳng Map 1 luôn
-                        startNewGameFromBeginning();
+                        startNewGameFromBeginning(); // START GAME
                     } else if (menuOption == 1) gameState = GameState.TUTORIAL;
                     else if (menuOption == 2) gameState = GameState.ABOUT_US;
                     else if (menuOption == 3) gameState = GameState.LEADERBOARD;
@@ -342,7 +342,6 @@ public class GamePanel extends JPanel implements Runnable {
             return;
         }
 
-        // --- MÀN HÌNH CHỌN MAP (Chỉ xuất hiện khi bấm SELECT MAP sau khi đã phá đảo Map 3) ---
         if (gameState == GameState.MAP_SELECTION) {
             if (keyH.rightPressed) {
                 soundManager.playSFX(3);
@@ -364,7 +363,7 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (keyH.enterPressed) {
                 soundManager.playSFX(3);
-                resetGame(); // Nạp map đã chọn và bắt đầu chơi
+                resetGame();
                 keyH.enterPressed = false;
             }
             if (keyH.escapePressed) {
@@ -375,24 +374,60 @@ public class GamePanel extends JPanel implements Runnable {
             return;
         }
 
+        // --- MÀN HÌNH GAME OVER / PHÁ ĐẢO / VICTORY ---
         if (isGameOver || isVictory) {
-            hasSavedGame = false;
 
-            if (keyH.spacePressed) {
-                if (isVictory) {
-                    currentMapIndex++;
-                    if (currentMapIndex >= mapList.length) {
-                        currentMapIndex = 0;
+            // 1. NẾU CHẾT (GAME OVER) -> BẤM SPACE/ENTER ĐỂ PLAY AGAIN, ESC ĐỂ VỀ MENU
+            if (isGameOver) {
+                if (keyH.spacePressed || keyH.enterPressed) {
+                    soundManager.playSFX(3);
+                    resetGame(); // Tải lại chính map vừa bị chết
+                    keyH.spacePressed = false;
+                    keyH.enterPressed = false;
+                } else if (keyH.escapePressed) {
+                    soundManager.playSFX(3);
+                    returnToMainMenu(); // Về Menu
+                    keyH.escapePressed = false;
+                }
+                return;
+            }
+
+            // 2. NẾU THẮNG MÀN (VICTORY)
+            if (isVictory) {
+                // A. Nếu vừa thắng Map 3 (Màn cuối)
+                if (currentMapIndex == mapList.length - 1) {
+                    if (keyH.spacePressed || keyH.enterPressed || keyH.escapePressed) {
+                        soundManager.playSFX(3);
+                        returnToMainMenu(); // Về Menu hiển thị SELECT MAP
+                        keyH.spacePressed = false;
+                        keyH.enterPressed = false;
+                        keyH.escapePressed = false;
+                    }
+                } 
+                // B. Nếu thắng Map 1 hoặc Map 2
+                else {
+                    if (keyH.escapePressed) {
+                        soundManager.playSFX(3);
+                        currentMapIndex++;
+                        if (currentMapIndex >= mapList.length) {
+                            currentMapIndex = 0;
+                        }
+                        resetGame();
+                        returnToMainMenu();
+                        keyH.escapePressed = false;
+                    } else if (keyH.spacePressed || keyH.enterPressed) {
+                        soundManager.playSFX(3);
+                        currentMapIndex++;
+                        if (currentMapIndex >= mapList.length) {
+                            currentMapIndex = 0;
+                        }
+                        resetGame(); // Sang map kế tiếp luôn
+                        keyH.spacePressed = false;
+                        keyH.enterPressed = false;
                     }
                 }
-                resetGame();
-                keyH.spacePressed = false;
+                return;
             }
-            if (keyH.escapePressed) {
-                returnToMainMenu();
-                keyH.escapePressed = false;
-            }
-            return;
         }
 
         // --- LOGIC TRONG TRẬN ĐẤU CHÍNH THỨC ---
@@ -437,7 +472,7 @@ public class GamePanel extends JPanel implements Runnable {
                         if (!isVictory) {
                             isVictory = true;
                             soundManager.stopBGM();
-                            soundManager.playSFX(7); // Tiếng Victory
+                            soundManager.playSFX(7);
 
                             playerLives++;
                             checkpointLives = playerLives;
@@ -445,15 +480,11 @@ public class GamePanel extends JPanel implements Runnable {
 
                             config.LevelManager.unlockNextLevel(currentMapIndex);
 
-                            // NẾU THẮNG MAP 3 (MAP CUỐI) -> VỀ THẲNG MENU CHÍNH VỚI DÒNG "SELECT MAP"
+                            // CHỈ BẬT cờ phá đảo khi thắng MAP CUỐI (MAP 3)
                             if (currentMapIndex == mapList.length - 1) {
-                                isGameCompleted = true;
+                                isGameCompleted = true; // Bật cờ SELECT MAP ở Menu
                                 hasSavedGame = false;
                                 scoreBoard.insertScore(playerName, score);
-
-                                gameState = GameState.MENU;
-                                menuOption = 0; // Đặt con trỏ ở SELECT MAP
-                                soundManager.playBGM(10); // Bật nhạc Menu
                             }
                         }
                     }
@@ -513,7 +544,6 @@ public class GamePanel extends JPanel implements Runnable {
             }
 
         } else if (gameState == GameState.PAUSE) {
-            // === LOGIC MENU PAUSE ===
             if (keyH.upPressed) {
                 soundManager.playSFX(3);
                 pauseOption--;
@@ -530,13 +560,10 @@ public class GamePanel extends JPanel implements Runnable {
             if (keyH.enterPressed) {
                 soundManager.playSFX(3);
                 if (pauseOption == 0) {
-                    // 0: CONTINUE -> Chơi tiếp
                     gameState = GameState.PLAYING;
                 } else if (pauseOption == 1) {
-                    // 1: NEW GAME -> Hỏi tên mới & Bắt đầu lại từ Map 1
                     startNewGameFromBeginning();
                 } else if (pauseOption == 2) {
-                    // 2: MAIN MENU -> Thoát ra Menu chính & lưu trận cũ
                     returnToMainMenu();
                 }
                 keyH.enterPressed = false;
@@ -615,6 +642,10 @@ public class GamePanel extends JPanel implements Runnable {
 
             if (gameState == GameState.PAUSE && !isGameOver) {
                 uiManager.drawPauseScreen(g2, screenWidth, screenHeight, pauseOption);
+            } 
+            // CỤ THỂ FIX LỖI 2: Chỉ vẽ màn hình mừng chiến thắng khi THẮNG CHÍNH XÁC MAP 3!
+            else if (isVictory && currentMapIndex == mapList.length - 1) {
+                uiManager.drawGameCompletedScreen(g2, assetManager.getSprite("GAME_COMPLETED_BG"), score, screenWidth, screenHeight);
             } else if (isGameOver || isVictory) {
                 uiManager.drawEndGameScreen(g2, screenWidth, screenHeight, score, isVictory);
             }
