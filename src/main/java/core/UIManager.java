@@ -359,40 +359,4 @@ public class UIManager {
         g2.setColor(Color.ORANGE);
         g2.drawString("<- Press ESC to Return Menu", 40, screenHeight - 50);
     }
-    public void drawGameCompletedScreen(Graphics2D g2, Image bgImage, int score, int screenWidth, int screenHeight) {
-    // 1. Vẽ ảnh nền chiến thắng (Căn vừa khung hình)
-    if (bgImage != null) {
-        g2.drawImage(bgImage, 0, 0, screenWidth, screenHeight, null);
-    } else {
-        g2.setColor(Color.BLACK);
-        g2.fillRect(0, 0, screenWidth, screenHeight);
-    }
-
-    // 2. Vẽ một dải băng tối phía dưới để làm nổi chữ
-    g2.setColor(new Color(0, 0, 0, 190)); // Màu đen trong suốt
-    int bannerHeight = 110;
-    int bannerY = screenHeight - bannerHeight - 20;
-    g2.fillRect(0, bannerY, screenWidth, bannerHeight);
-
-    // 3. Hiển thị dòng chữ "Thanks for playing the game"
-    g2.setFont(new Font("Arial", Font.BOLD, 24));
-    g2.setColor(Color.YELLOW);
-    String titleText = "Thanks for playing the game!";
-    int titleX = (screenWidth - g2.getFontMetrics().stringWidth(titleText)) / 2;
-    g2.drawString(titleText, titleX, bannerY + 35);
-
-    // 4. Hiển thị Điểm số (Score)
-    g2.setFont(new Font("Arial", Font.BOLD, 20));
-    g2.setColor(Color.WHITE);
-    String scoreText = "FINAL SCORE: " + score;
-    int scoreX = (screenWidth - g2.getFontMetrics().stringWidth(scoreText)) / 2;
-    g2.drawString(scoreText, scoreX, bannerY + 68);
-
-    // 5. Dòng hướng dẫn quay lại Menu
-    g2.setFont(new Font("Arial", Font.ITALIC, 14));
-    g2.setColor(Color.LIGHT_GRAY);
-    String hintText = "Press ENTER / ESC to return to Menu";
-    int hintX = (screenWidth - g2.getFontMetrics().stringWidth(hintText)) / 2;
-    g2.drawString(hintText, hintX, bannerY + 95);
-}
 }
